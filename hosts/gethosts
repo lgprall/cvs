@@ -1,0 +1,220 @@
+#!/usr/local/bin/perl -w
+
+# get_hosts
+# $Id$  $Name$
+# Collect hosts, trying very hard not to hit any more than once...
+
+use strict;
+use Net::hostent;
+use IO::Socket;
+use Socket;
+use LWP::UserAgent;
+use HTTP::Request;
+use Getopt::Long;
+use Errno "EAGAIN";
+use POSIX ":sys_wait_h";
+
+$| = 1;
+$SIG{CHLD} = \&REAPER;
+
+( my $ME = $0 ) =~ s@.*/@@;
+my $USAGE = qq(USAGE: $ME [-d depth][ -p procs][-o out_file][-f in_file] [s0 s1 ..]\n);
+
+# Options
+my $depth = 3;
+my $procs = 8;
+my $out;
+my $file;
+GetOptions( 'depth=i' => \$depth,
+            'procs=i' => \$procs,
+            'out=s'   => \$out,
+            'file=s'    => \$file );
+
+# Priming the pump
+my @HOSTS;
+if ( defined $file ) {
+	die $USAGE if @ARGV;
+	die qq(Can't read "$file": $!\n) unless -r $file;
+	open IN, "<$file";
+	@HOSTS = <IN>;
+	close IN;
+} elsif ( @ARGV ) {
+	@HOSTS = @ARGV;
+} else {
+	@HOSTS = <DATA>;
+}
+chomp @HOSTS;
+
+# Spawn the workers...
+my @pids;
+my $ID = 0;
+for ( 1 .. $procs ) {
+	my $pid;
+	$ID++;
+	FORK:
+	if ( $pid = fork ) {
+		# I'm da boss!
+		push @pids, $pid
+	} elsif ( defined $pid ) {
+		getem();
+		exit 0;
+	} elsif ( $! == EAGAIN ) {
+		sleep 5;
+		redo FORK;
+	} else {
+		die "Can't fork: $!\n";
+	}
+}
+
+# Main Process
+my $path = '/tmp/words';
+-e $path && unlink $path;
+$SIG{TERM} = $SIG{INT} = sub { unlink $path; exit 0; };
+
+my $listen = IO::Socket::UNIX->new( Local => $path,
+                                    Listen => SOMAXCONN )
+   or die "Socket: $!\n";
+$| = 1;
+warn "Waiting for incoming connections on UNIX path $path...\n";
+warn "Starting with ", scalar @HOSTS, " hosts.\n";
+my %visited_name;
+my %visited_ip;
+my %level;
+my $time = time;
+my $level = 1;
+while (@HOSTS) {
+	my $connected = $listen->accept();
+	chomp (my $q = <$connected>) ;
+	if ( $q eq "gimme" ) {
+		my $host;
+		do { $host = shift @HOSTS } until $host and not $visited_name{lc($host)};
+		unless ( $HOSTS[0]) {
+			@HOSTS = keys %level;
+			last unless $HOSTS[0];
+			%level = ();
+			print "Level $level complete; ", scalar keys %visited_name, " hosts visited.\n";
+			if ( $level++ == $depth ) {
+				exit 0;
+			} else {
+				print "There are ", scalar @HOSTS, " hosts in next level.\n";
+			}
+		}
+		print $connected $host;			
+	}
+	elsif ( $q eq "hereyago" ) {
+		my $string = <$connected>;
+		chomp(my @ary = split /\|/, $string, 2);
+		my ($visited, $visited_ips ) = split /#/, $ary[0];
+		$visited_name{lc($visited)}++;
+		foreach my $visited_ip ( split /,/, $visited_ips ) {
+			$visited_ip{$visited_ip}++;
+		}
+		my @next = split /\|/, $ary[1] if $ary[1];
+		HOST:
+		foreach my $next ( @next ) {
+			my ( $h, $ips ) = split /#/, $next;
+			my @ips = split /,/, $ips;
+			# we won't mark these as visited just yet
+			next if $visited_name{lc($h)};
+			foreach my $ip ( @ips ) {
+				next HOST if $visited_ip{$ip};
+			}
+			$level{$h}++;
+		}
+		my $t1 = time;
+		if ( $t1 - $time > 10 ) {
+			print "In level $level of $depth: ", scalar keys %visited_name, " hosts visited -- ", scalar localtime($t1), ".\n";
+			$time = $t1;
+		}
+	}
+}
+
+sub getem {
+	my $host;
+	my $me = $ID;
+	my $ua = LWP::UserAgent->new();
+	$ua->agent("Mozilla/4.0");
+	$ua->timeout(30);
+	
+	my $path = '/tmp/words';
+	my $sock;
+	sleep 1 + $ID * 10;  #kludge to handle insufficient hosts in pipe at start
+	# Try using USR1 and USR2 to tell kids when to wait
+	while ( not defined eval { $sock = IO::Socket::UNIX->new( $path ) } ) {
+		sleep 1;
+	}
+	$| = 1;
+	while ( 1 ) {
+		print $sock "gimme\n";
+		chomp( $host = <$sock>);
+		$sock->close;
+		# This is to split apart the base host and any port designation
+		next unless $host;
+		$host =~ s/(:\d+)$// and (my $port = $1) =~ s/^://;
+		my $h;
+		## Probably should modify this so that we can handle IP addresses as well as
+		## host names
+		# (Turns out it already DOES handle IP addresses; it's just that most of the
+		# IP addresses found are not valid.)
+		unless ($h = gethost( $host ) ){
+			warn "[Proc $me] no such host: $host\n";
+			next;
+		}
+		my $host_ips = join ",", map { inet_ntoa($_) } @{$h->addr_list};
+		# Reassemble everything
+		my $url = $host;
+		$url = "http://" . $url unless $url =~ m@\Ahttp://@;
+		$url .= ":$port" if $port;
+		my $req; my $resp;
+		$req = HTTP::Request->new(GET => $url);
+		# GIFS?  We don't need no stinkin' GIFS!
+		$req->header(Accept => 'text/*');
+		$resp = $ua->request($req);
+		my $string = "$host#$host_ips";	
+		my %hosts;
+		if ($resp->is_error() ) {
+			next;
+		} else {
+			# Grab the page as a single string..
+			my $content = $resp->content();
+			# Pull all of the likely URLS into an array...
+			my @tmp = $content =~ /http:\/\/(.*?)[^.:\-\w]/msg;
+			# And pass the info back to main
+			foreach my $tgt ( @tmp ) {
+			# Process through
+				next if $hosts{$tgt}++;
+				next unless $h = gethost( $tgt );
+				my $ips = join ",", map { inet_ntoa($_) } @{$h->addr_list};
+				$string .= "$tgt#$ips|";
+			}
+		}
+		$sock = IO::Socket::UNIX->new( $path ) or die "Socket: $!\n";
+		next unless $string;
+		print $sock "hereyago\n";
+		print $sock "$string\n";
+		$sock->close;
+		$host .= ":$port" if $port;
+		print "Proc $me visited $host\n";
+	} continue {
+		$sock = IO::Socket::UNIX->new( $path ) or die "Socket: $!\n";
+	}
+}
+
+sub REAPER {
+	my $goner;
+	while ($goner = waitpid(-1, &WNOHANG) > 0 ) {
+	}
+	$SIG{CHLD} = \&REAPER;
+}
+
+	
+            
+__DATA__
+drudgereport.com
+www.macsurfer.com
+news.google.com
+refdesk.com
+www.ryukyushimpo.co.jp
+
+            
+
