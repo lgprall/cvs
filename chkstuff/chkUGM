@@ -1,0 +1,83 @@
+#!/usr/bin/perl
+
+die "You must run this script as root (or with sudo).\n" if $<;
+
+# In case we ever want to add a few more BOM files
+# we'll make provision to stuff a few more entries
+# in the array.
+my @BOMS = ( "/System/Library/CoreServices/BaseSystem.bom" );
+
+# We'll write a shell script which can be run to make any
+# corrections which we say we need
+open SCRIPT, ">/tmp/fixUGM.sh" or die "Can't open script file\n";
+print SCRIPT "#!/bin/sh\ncd /\n";
+
+# The $count variable will be used to determine whether we'll
+# leave the "FixUGM.sh" script around or not.  Haven't found
+# one yet that didn't find a bogus correction or two.
+my $count = 0;
+
+sub chkmode {
+	my ( $file, $m, $t_m) = @_;
+	my %type = (
+	' 10000' => 'named pipe',
+	' 20000' => 'character special',
+	' 40000' => 'directory',
+	' 60000' => 'block special',
+	'100000' => 'regular file',
+	'120000' => 'symbolic link',
+	'140000' => 'socket',
+	'160000' => 'whiteout',
+	);
+	
+	if ( (my $ft = oct($m) & 0170000 ) eq (my $t_ft = oct($t_m) & 0170000) ) {
+		if ( (my $mode = oct($m) & 07777) ne oct($t_m) & 07777 ) {
+			$count++;
+			printf SCRIPT "chmod %o %s\n", $mode, $file, "\n";
+		}
+	} else {
+		$count++;
+		my $oft = sprintf "%6o", $ft;
+		my $ot_ft = sprintf "%6o", $t_ft;
+		print "Fatal error: $file is a $type{$ot_ft} instead of $type{$oft}\n";
+		print SCRIPT "### Fatal error: $file is a $type{$ot_ft} instead of $type{$oft}\n";
+		# Even though this is a fatal error for the system, it's not
+                # for the script, so we'll press on.
+	}
+}
+
+chdir "/";
+while (<@BOMS>) {
+	open LSBOM, "/usr/bin/lsbom $_ |";
+	while (<LSBOM>) {
+		my ( $file, $mode, $ug) = (split /\t/, $_);
+		chomp $ug;
+		$ug =~ s@/@:@;
+		die "Fatal error in input (tab in filename $file)" unless $ug =~ /(\d+:\d+)/;
+		if ( not -e $file ) {
+			warn "No such file $file\n";
+			next;
+		}
+		my ( $a_mode, $user, $group ) = (lstat $file)[2,4,5];
+		my $t_mode = sprintf "%4o", $a_mode;
+		my $t_ug = "$user" . ":" . "$group";
+		next if $mode eq $t_mode and $ug eq $t_ug;
+		if ( $mode ne $t_mode ) { chkmode($file, $mode, $t_mode); }
+		 unless ( $ug eq $t_ug) {
+			 $count ++;
+			 # If Apple ever starts shipping files owned by
+			 # "nobody" this line will have to change to
+			 # print SCRIPT "chown -- $ug $file\n";
+			 print SCRIPT "chown $ug $file\n";
+		}
+	}
+}
+
+close SCRIPT;
+if ( $count ) {
+	chmod 0744, "/tmp/fixUGM.sh";
+} else {
+	unlink "~/fixUGM.sh";
+}
+
+print "\nCheck the script /tmp/fixUGM.sh for discrepancies.\n";
