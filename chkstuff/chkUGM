@@ -1,11 +1,23 @@
 #!/usr/bin/perl
+# 
+# This script reads the bom files from installed software on a MacOS X system
+# and compares the current modes, owners, and groups of installed files to
+# those when they were installed.  It generates a shell script which can be run
+# to restore the files to their original state. Necessity is the mother, etc.
+# Suggestions, enhancements, and comments to Larry Prall <lgp@cablespeed.com>
 
 die "You must run this script as root (or with sudo).\n" if $<;
 
 # In case we ever want to add a few more BOM files
 # we'll make provision to stuff a few more entries
 # in the array.
-my @BOMS = ( "/System/Library/CoreServices/BaseSystem.bom" );
+my @BOMS = (
+	"/System/Library/CoreServices/BaseSystem.bom",
+	"/Library/Receipts/BSD.pkg/Contents/Resources/BSD.bom",
+	"/Library/Receipts/Essentials.pkg/Contents/Resources/Essentials.bom",
+	"/Library/Receipts/SecurityUpdate10-19-01.pkg/Contents/Resources/SecurityUpdate10-19-01.bom",
+	"/Library/Receipts/MacOSXUpdate10.1.1.pkg/Contents/Resources/MacOSXUpdate10.1.1.bom",
+	);
 
 # We'll write a shell script which can be run to make any
 # corrections which we say we need
@@ -33,7 +45,7 @@ sub chkmode {
 	if ( (my $ft = oct($m) & 0170000 ) eq (my $t_ft = oct($t_m) & 0170000) ) {
 		if ( (my $mode = oct($m) & 07777) ne oct($t_m) & 07777 ) {
 			$count++;
-			printf SCRIPT "chmod %o %s\n", $mode, $file, "\n";
+			printf SCRIPT "chmod %o \"%s\"\n", $mode, $file, "\n";
 		}
 	} else {
 		$count++;
@@ -46,14 +58,24 @@ sub chkmode {
 	}
 }
 
+my $root;
 chdir "/";
 while (<@BOMS>) {
 	open LSBOM, "/usr/bin/lsbom $_ |";
 	while (<LSBOM>) {
 		my ( $file, $mode, $ug) = (split /\t/, $_);
+		# We only want to process root once
+		next if $file eq "." and  $root;
+		$root++ if $file eq ".";
+		# We can't change these anyway, so forget about them
+		next if  $file eq "./.vol" or $file eq "./dev";
+		# No point in worrying about symlinks
+		next if -l $file;
+		# Skip the "rsrc" files...
+		next if $file =~ /\/\._/;
 		chomp $ug;
 		$ug =~ s@/@:@;
-		die "Fatal error in input (tab in filename $file)" unless $ug =~ /(\d+:\d+)/;
+		die "Fatal error in input (possible tab in filename $file ?)" unless $ug =~ /(\d+:\d+)/;
 		if ( not -e $file ) {
 			warn "No such file $file\n";
 			next;
@@ -64,11 +86,11 @@ while (<@BOMS>) {
 		next if $mode eq $t_mode and $ug eq $t_ug;
 		if ( $mode ne $t_mode ) { chkmode($file, $mode, $t_mode); }
 		 unless ( $ug eq $t_ug) {
-			 $count ++;
+			 $count++;
 			 # If Apple ever starts shipping files owned by
 			 # "nobody" this line will have to change to
-			 # print SCRIPT "chown -- $ug $file\n";
-			 print SCRIPT "chown $ug $file\n";
+			 # print SCRIPT "chown -- $ug \"$file\"\n";
+			 print SCRIPT "chown $ug \"$file\"\n";
 		}
 	}
 }
@@ -76,8 +98,8 @@ while (<@BOMS>) {
 close SCRIPT;
 if ( $count ) {
 	chmod 0744, "/tmp/fixUGM.sh";
+	print "\nCheck the script /tmp/fixUGM.sh for discrepancies.\n";
 } else {
-	unlink "~/fixUGM.sh";
+	unlink "/tmp/fixUGM.sh";
+	print "\nFound no corrections to be made.\n";
 }
-
-print "\nCheck the script /tmp/fixUGM.sh for discrepancies.\n";

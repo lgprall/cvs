@@ -1,6 +1,30 @@
 #!/bin/sh
-# Must run as root rather than as arg to sudo; do 'sudo -s', then run
-# This rather awkward procedure is so that we can get full pathnames in the output.
-# The awk print statement makes some assumptions.
-/usr/bin/find / -print0 | /usr/bin/xargs -0 /bin/ls -ldo 2>/dev/null  | awk ' $0 ~! /^ *$/ && $0 !~ /:$/ && $0 !~ /^total/ && $5 != "-" { print $5, $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20 } '
+# Checks for files with any flags set; prints out the flag followed by
+# the full pathname
+# Must run as root or with sudo
+
+ME=`/usr/bin/id | /usr/bin/sed 's/uid=\([^)]*\)(.*$/\1/'`
+if [ $ME -ne 0 ]; then
+	echo "Sorry.  Gotta run as root."
+	exit
+fi
+if [ -n "$1" ]
+	then
+	TOP=$*
+	for dir in $TOP
+	do
+		if [ ! -d $dir ]
+		then
+			echo "$dir not a directory."
+			exit 1
+		fi
+	done
+else
+	TOP="/"
+fi
+# This rather awkward procedure is so that we can get full pathnames
+# in the output.
+# The awk print statement makes some assumptions.  Elegance isn't everything.
+# Fortunately.
+/usr/bin/find $TOP -print0 | /usr/bin/xargs -0 /bin/ls -ldo 2>/dev/null  | awk ' $0 ~! /^ *$/ && $0 !~ /:$/ && $0 !~ /^total/ && $5 != "-" { print $5, $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20 } '
 
