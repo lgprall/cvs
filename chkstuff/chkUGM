@@ -1,5 +1,6 @@
 #!/usr/bin/perl
-# 
+
+# chkUGM (v1.0)
 # This script reads the bom files from installed software on a MacOS X system
 # and compares the current modes, owners, and groups of installed files to
 # those when they were installed.  It generates a shell script which can be run
@@ -10,7 +11,11 @@ die "You must run this script as root (or with sudo).\n" if $<;
 
 # In case we ever want to add a few more BOM files
 # we'll make provision to stuff a few more entries
-# in the array.
+# in the array. New entries must be added at the end
+# of the list since the boms need to be processed in the
+# order they were loaded. Sometimes the UGM data for a
+# file changes between builds and we need to take the
+# most recent.
 my @BOMS = (
 	"/System/Library/CoreServices/BaseSystem.bom",
 	"/Library/Receipts/BSD.pkg/Contents/Resources/BSD.bom",
@@ -19,15 +24,8 @@ my @BOMS = (
 	"/Library/Receipts/MacOSXUpdate10.1.1.pkg/Contents/Resources/MacOSXUpdate10.1.1.bom",
 	);
 
-# We'll write a shell script which can be run to make any
-# corrections which we say we need
-open SCRIPT, ">/tmp/fixUGM.sh" or die "Can't open script file\n";
-print SCRIPT "#!/bin/sh\ncd /\n";
-
-# The $count variable will be used to determine whether we'll
-# leave the "FixUGM.sh" script around or not.  Haven't found
-# one yet that didn't find a bogus correction or two.
-my $count = 0;
+# We'll key on filename and stick with the last change we find
+my ( %User_Group, %Mode, %Fatal );
 
 sub chkmode {
 	my ( $file, $m, $t_m) = @_;
@@ -43,16 +41,15 @@ sub chkmode {
 	);
 	
 	if ( (my $ft = oct($m) & 0170000 ) eq (my $t_ft = oct($t_m) & 0170000) ) {
-		if ( (my $mode = oct($m) & 07777) ne oct($t_m) & 07777 ) {
-			$count++;
-			printf SCRIPT "chmod %o \"%s\"\n", $mode, $file, "\n";
+		if ( (my $mode = oct($m) & 07777) ne oct($t_m) & 07777 or exists $Mode{$file} ) {
+			$Mode{$file} = $mode;
 		}
 	} else {
-		$count++;
 		my $oft = sprintf "%6o", $ft;
 		my $ot_ft = sprintf "%6o", $t_ft;
 		print "Fatal error: $file is a $type{$ot_ft} instead of $type{$oft}\n";
-		print SCRIPT "### Fatal error: $file is a $type{$ot_ft} instead of $type{$oft}\n";
+		$Fatal{$file}{GOOD_TYPE} = $type{$oft};
+		$Fatal{$file}{BAD_TYPE} = $type{$ot_ft};
 		# Even though this is a fatal error for the system, it's not
                 # for the script, so we'll press on.
 	}
@@ -60,9 +57,26 @@ sub chkmode {
 
 my $root;
 chdir "/";
+# Since we expect a lot of files to be missing, we won't clutter the display
+# with them.
+open MISSING, ">/tmp/missing_files.txt";
+
+# But we need some sort of visual indication that something is happening, so
+# we'll use unbuffered output...
+$|=1;
+
+# ...and print some dots
+print "Each dot represents 1000 files checked...\n";
+my $filecount;
+
 while (<@BOMS>) {
 	open LSBOM, "/usr/bin/lsbom $_ |";
 	while (<LSBOM>) {
+		$filecount++;
+		if ( $filecount > 999 ) {
+			print ".";
+			$filecount = 0;
+		}
 		my ( $file, $mode, $ug) = (split /\t/, $_);
 		# We only want to process root once
 		next if $file eq "." and  $root;
@@ -75,31 +89,80 @@ while (<@BOMS>) {
 		next if $file =~ /\/\._/;
 		chomp $ug;
 		$ug =~ s@/@:@;
-		die "Fatal error in input (possible tab in filename $file ?)" unless $ug =~ /(\d+:\d+)/;
+		# If we don't have the right pattern in the third field...
+		die "Fatal error in input (possible tab in filename $file ? )" unless $ug =~ /(\d+:\d+)/;
+		# There will normally be a lot of missing files because of
+		# updated or removed (or moved) applications, and because of
+		# dynamic files like the netinfo db files.
 		if ( not -e $file ) {
-			warn "No such file $file\n";
+			print MISSING "No such file $file\n";
 			next;
 		}
 		my ( $a_mode, $user, $group ) = (lstat $file)[2,4,5];
 		my $t_mode = sprintf "%4o", $a_mode;
 		my $t_ug = "$user" . ":" . "$group";
-		next if $mode eq $t_mode and $ug eq $t_ug;
-		if ( $mode ne $t_mode ) { chkmode($file, $mode, $t_mode); }
-		 unless ( $ug eq $t_ug) {
-			 $count++;
-			 # If Apple ever starts shipping files owned by
-			 # "nobody" this line will have to change to
-			 # print SCRIPT "chown -- $ug \"$file\"\n";
-			 print SCRIPT "chown $ug \"$file\"\n";
+
+		# If everything is as it should be and we haven't make any
+		# changes to this file previously we'll press on
+		next if $mode eq $t_mode and $ug eq $t_ug and not exists $Mode{$file} and not exists $User_Group{$file};
+
+		if ( $mode eq $t_mode ) {
+			# Then a later change has overridden an earlier one
+			# so we'll leave it alone.
+			delete $Mode{$file};
+		} else {
+			chkmode($file, $mode, $t_mode);
+		}
+		if ( $ug eq $t_ug ) {
+			# Then a later change has overridden an earlier one
+			# so we'll leave it alone.
+			delete $User_Group{$file}
+		} else {
+			$User_Group{$file} = $ug;
 		}
 	}
 }
+print "\n";
 
-close SCRIPT;
-if ( $count ) {
+# Now we'll write our script -- if we have anything to write
+if ( %User_Group or %Mode ) {
+	open SCRIPT, ">/tmp/fixUGM.sh" or die "Can't open script file.\n";
+	print SCRIPT "#!/bin/sh\ncd /\n";
+	my $file;
+	foreach $file ( sort keys %Mode ) {
+		printf SCRIPT "chmod %o \"%s\"\n", $Mode{$file}, $file; 
+	}
+	foreach $file ( sort keys %User_Group ) {
+		# If Apple ever starts shipping files owned by "nobody"
+		# this line will have to change to
+		# print SCRIPT "chown -- $User_Group{$file} \"$file\"\n";
+		print SCRIPT "chown $User_Group{$file} \"$file\"\n";
+	}
+	close SCRIPT;
 	chmod 0744, "/tmp/fixUGM.sh";
 	print "\nCheck the script /tmp/fixUGM.sh for discrepancies.\n";
 } else {
-	unlink "/tmp/fixUGM.sh";
-	print "\nFound no corrections to be made.\n";
+	print "\nNo corrections to be made.\n";
 }
+
+if ( %Fatal ) {
+	print "\nThere were fatal errors.\n";
+	my $nofile;
+	open FATALS, ">/tmp/FATAL_ERRORS.txt" or warn "Can't open errors file.\n", $nofile++;
+	foreach $file ( sort keys %Fatal ) {
+		print "Fatal error: $file is a $Fatal{$file}{BAD_TYPE} instead of $Fatal{$file}{GOOD_TYPE}\n";
+		print FATALS "Fatal error: $file is a $Fatal{$file}{BAD_TYPE} instead of $Fatal{$file}{GOOD_TYPE}\n" unless $nofile;
+ 	}
+	unless ( $nofile ) {
+		close FATALS;
+		chmod 0644, "/tmp/FATAL_ERRORS.txt";
+		print "The list of fatal errors is in /tmp/FATAL_ERRORS.txt\n";
+	}
+}
+
+if ( -s "/tmp/missing_files.txt" ) {
+	print "\nA list of missing files is in /tmp/missing_files.txt\n";
+} else {
+	unlink "/tmp/missing_files.txt";
+}
+
