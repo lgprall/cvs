@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
-# chkUGM (v1.1.7) updated to track MacOSXUpdate10.1.4
+# chkUGM (v1.1.9) updated to track MacOSXUpdate10.1.5 with the Networking
+# update and the Security Update July 2002.
 # This script reads the bom files from installed software on a MacOS X system
 # and compares the current modes, owners, and groups of installed files to
 # those when they were installed.  It generates a shell script which can be run
@@ -27,14 +28,19 @@ my @BOMS = (
 	"/Library/Receipts/SecurityUpdateApril2002.pkg/Contents/Resources/SecurityUpdateApril2002.bom",
 	"/Library/Receipts/MacOSXUpdate10.1.4.pkg/Contents/Resources/MacOSXUpdate10.1.4.bom",
 	"/Library/Receipts/MacOSXUpdate10.1.5.pkg/Contents/Resources/MacOSXUpdate10.1.5.bom",
+	"/Library/Receipts/NetworkingUpdate.pkg/Contents/Resources/NetworkingUpdate.bom",
+	"/Library/Receipts/SecurityUpdateJuly2002.pkg/Contents/Resources/SecurityUpdateJuly2002.bom",
 	);
 # A bit of a kludge added to handle the combo updates
 my $combo2 = "/Library/Receipts/MacOSXUpdateCombo10.1.2.pkg/Contents/Resources/MacOSXUpdateCombo10.1.2.bom";
 my $combo3 = "/Library/Receipts/MacOSXUpdateCombo10.1.3.pkg/Contents/Resources/MacOSXUpdateCombo10.1.3.bom";
-if ( -f $combo3 ) {
-	splice @BOMS, 4, 3, ($combo3 );
+my $combo5 = "/Library/Receipts/MacOSXUpdateCombo10.1.5.pkg/Contents/Resources/MacOSXUpdateCombo10.1.5.bom";
+if ( -f $combo5 ) {
+	splice @BOMS, 4, 5, ($combo5);
+} elsif ( -f $combo3 ) {
+	splice @BOMS, 4, 3, ($combo3);
 } elsif ( -f $combo2 ) {
-	splice @BOMS, 4, 2, ($combo2 );
+	splice @BOMS, 4, 2, ($combo2);
 }
 
 # We'll key on filename and stick with the last change we find

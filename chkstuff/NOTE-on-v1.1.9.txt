@@ -1,0 +1,19 @@
+This version has not been tested with the 10.1.5 combo, since I no
+longer have access to a lab where I can beat on all this stuff. It
+works on my system, which doesn't have the combo update, so it didn't
+break anything and I am reasonably sure that the same thing which
+worked for combo updates 10.1.2 and 10.1.3 will work for this one.
+That said, I would appreciate any feedback from users who have
+installed the 10.1.5 combo update and use this version of the chkUGM
+script.
+
+On a side note, I had hoped that with Apple's release of "Repair
+Privileges" I could put this package out to pasture. I don't think
+that's going to be the case, since "Repair Privileges" is -- for
+whatever reason -- much slower and I don't think quite as well
+focused.  I'm still hoping for a better system solution to the
+problem when Jaguar arrives on the scene, but if it isn't there then
+I'll see if I can find time to build a GUI version of this stuff.
+
+Larry Prall
+July 6, 2002
