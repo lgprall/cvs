@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# chkUGM (v1.1.1)
+# chkUGM (v1.1.2)
 # This script reads the bom files from installed software on a MacOS X system
 # and compares the current modes, owners, and groups of installed files to
 # those when they were installed.  It generates a shell script which can be run
@@ -67,10 +67,15 @@ open MISSING, ">/tmp/missing_files.txt";
 $|=1;
 
 # ...and print some dots
-print "Each dot represents 1000 files checked...\n";
+print "Each dot represents 1000 files checked:\n";
 my $filecount;
 
 while (<@BOMS>) {
+	if ( not -f $_ ) {
+		($noshow = $_) =~ s@.*/@@;
+		print "\nNo BOM file $noshow; not installed?\n";
+		next;
+	}
 	open LSBOM, "/usr/bin/lsbom $_ |";
 	while (<LSBOM>) {
 		$filecount++;
@@ -141,7 +146,7 @@ if ( %User_Group or %Mode ) {
 	}
 	close SCRIPT;
 	chmod 0744, "/tmp/fixUGM.sh";
-	print "\nCheck the script /tmp/fixUGM.sh for discrepancies.\n";
+	print "\nCheck the script /tmp/fixUGM.sh for discrepancies; run it to correct them.\n";
 } else {
 	print "\nNo corrections to be made.\n";
 }
