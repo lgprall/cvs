@@ -1,3 +1,15 @@
+Version 1.1.10 notes:
+
+Barring unforseen circumstances, this will be the final release of
+"chkstuff" (though not necessarily of chkUGM itself).  If a similar
+utility is still needed after the release of Jaguar later this month
+I'll update chkUGM and its supporting cast and get it posted. 
+
+Larry Prall
+August 4, 2002
+==================================================================
+Version 1.1.9 notes:
+
 This version has not been tested with the 10.1.5 combo, since I no
 longer have access to a lab where I can beat on all this stuff. It
 works on my system, which doesn't have the combo update, so it didn't

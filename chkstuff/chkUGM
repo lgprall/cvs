@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# chkUGM (v1.1.9) updated to track MacOSXUpdate10.1.5 with the Networking
-# update and the Security Update July 2002.
+# chkUGM (v1.1.10) updated to track the security updates for 7-12-02,
+# 7-18-02 and 2002-08-02.  (I didn't change the date format: they did.)
 # This script reads the bom files from installed software on a MacOS X system
 # and compares the current modes, owners, and groups of installed files to
 # those when they were installed.  It generates a shell script which can be run
@@ -30,6 +30,9 @@ my @BOMS = (
 	"/Library/Receipts/MacOSXUpdate10.1.5.pkg/Contents/Resources/MacOSXUpdate10.1.5.bom",
 	"/Library/Receipts/NetworkingUpdate.pkg/Contents/Resources/NetworkingUpdate.bom",
 	"/Library/Receipts/SecurityUpdateJuly2002.pkg/Contents/Resources/SecurityUpdateJuly2002.bom",
+	"/Library/Receipts/SecurityUpdate7-12-02.pkg/Contents/Resources/SecurityUpdate7-12-02.bom",
+	"/Library/Receipts/SecurityUpdate7-18-02.pkg/Contents/Resources/SecurityUpdate7-18-02.bom",
+	"/Library/Receipts/SecurityUpd2002-08-02.pkg/Contents/Resources/SecurityUpd2002-08-02.bom",
 	);
 # A bit of a kludge added to handle the combo updates
 my $combo2 = "/Library/Receipts/MacOSXUpdateCombo10.1.2.pkg/Contents/Resources/MacOSXUpdateCombo10.1.2.bom";
