@@ -11,19 +11,20 @@ for its riveting plot.  Any files which are not of the same type
 they should be are flagged as fatal errors, since the script can't
 do anything about them, but the script will still run to completion.
 Missing files are reported, but otherwise ignored.  There will
-probably be a lot of them, since most of the netinfo db files will
-have been replaced, some of the originally installed apps will have
-been replaced, and some applications may have been moved. The names
-of missing files are written to a file in /tmp.  Symbolic links
-are ignored, as are the directories "/.vol" and "/dev" since they
-can't be changed anyway.  This is a relatively sound script; it
-makes the assumption that no filenames in the bom contain tabs
-(which should be a fairly safe assumption) but just dies with an
-error if it hits one.  It also assumes that no files are shipped
-with an owner of "nobody" but the fix for that is already in the
-script ready to go if it ever happens.  The fix is just too ugly
-to leave in unless it's needed so it's commented out for now.  You
-must run "chkUGM" with sudo or as root.
+probably be a lot of them, some of the originally installed apps
+will have been replaced, some applications may have been moved,
+and some files may simply have been removed. Netinfo database files
+are ignored, since most of the installed files will have been
+replaced. The names of other  missing files are written to a file
+in /tmp.  Symbolic links are ignored, as are the directories "/.vol"
+and "/dev" since they can't be changed anyway.  This is a relatively
+sound script; it makes the assumption that no filenames in the bom
+contain tabs (which should be a fairly safe assumption) but just
+dies with an error if it hits one.  It also assumes that no files
+are shipped with an owner of "nobody" but the fix for that is
+already in the script ready to go if it ever happens.  The fix is
+just too ugly to leave in unless it's needed so it's commented out
+for now.  You must run "chkUGM" with sudo or as root.
 
 "chklocks" is a shell script using awk, and is not at all sound.
 It must be run as root or with sudo.
