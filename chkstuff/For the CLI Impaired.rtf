@@ -19,6 +19,8 @@ Now you're going to run the first script:\
 Type 'sudo ./\cb2 chkUGM\cb1 ' and hit return.\
 You will be prompted for a password.  Enter your login password and hit return.\
 \
+(If you get any errors like "Sorry, sudo must be setuid root." or "sudo: /var/run/sudo owned by uid 501, should be owned by root, then follow the procedures in "If 'sudo' doesn't work" and come back here.)\
+\
 The script will run for awhile and generate a little output to keep you from getting bored.\
 When it finishes it will tell you that the changes are in /tmp/fixUGM.sh.\
 These are the changes that need to be made to your owners and privileges to put the system back in it's pristine state. If you had set up sendmail (which requires removing group write permission from the root directory; that's correct: one of those cases where a program won't run if the permissions are too lax) or some other program that required tightening permissions you might want to edit the file, but you shouldn't need to do that.  The script will actually fix some files that don't need to be fixed, but that won't hurt anything; it's just putting them back the way they were, and normal system operation changes some of them.\

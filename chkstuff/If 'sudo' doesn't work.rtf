@@ -1,0 +1,39 @@
+{\rtf1\mac\ansicpg10000\cocoartf100
+{\fonttbl\f0\fswiss\fcharset77 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww11720\viewh9500\viewkind0
+\pard\tx1440\tx2880\tx4320\tx5760\tx7200\ql\qnatural
+
+\f0\fs24 \cf0 Uh, oh.  Looks like you really did it this time. Now, you'll have to fix some things as 'root' before you can even run the scripts. There are three possibilities: you can log in as root from the Login screen right now; or you aren't set up to log in as root now, but you can use NetInfo Manager and User Preferences to allow root login; or in the worst  case you can't log in as root now, and you aren't able to set up for root login.\
+\
+If you can log in as root now, it's pretty simple. Just log in as root and follow the instructions in "For the CLI Impaired" except that you omit using 'sudo'. In other words, you just run the commands as './chkUGM' and '/tmp/fixUGM.sh'.\
+\
+To make it possible to log in as root if you can't now, you need to do two things: activate the root account and make it possible for root to log in through the login screen.\
+\
+To activate the root account start the NetInfo Manager, pull down the "Domain" menu to "Security" and select "Enable Root User"; if there is no root password you will have to select and confirm one before you can enable the account.\
+\
+To make it possible to log in as root through the login screen, open System Preferences -> Login and click on the "Login Window" tab. Uncheck the "Automatically log in" box if it is checked.  Either select "Name and password entry fields" for the "Display login window as:" selection, or check the 'Show "Other User" in list for network users' box.\
+\
+If that works and you can now log in as root, then just follow the instructions above. If either of those things fail, then you'll have to boot into single-user mode and make some changes to allow you to run the scripts according to the original instructions.\
+\
+To boot into single-user mode, reboot and hold down the command ("Apple") and "s" keys during the boot. You'll see some white-on-black text scroll by, ending with the message,\
+\
+Singleuser boot -- fsck not done\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sa480\ql\qnatural
+\cf0 Root device is mounted read-only\
+If you want to make modifications to files,\
+run '/sbin/fsck -y' first and then '/sbin/mount -uw /'\
+\
+and then the prompt,\
+\
+localhost#\
+\
+You're going to be making modifications, so run the '/sbin/fsck -y' command repeatedly until you get that message that your file system appears to be clean; you will see a lot of messages scrolling by during the run, and you may get a message saying that the file system was repaired, but if you do just run it again. Once you have a clean file system, run the "/sbin/mount -uw /" command. You shouldn't see any output at all from this command if you have entered it correctly; your prompt should just return. Once you have run the '/sbin/mount -uw /' command, enter the following commands, one per line:\
+\
+chown root:wheel /usr/bin/sudo\
+chmod 4111 /usr/bin/sudo\
+chown root:daemon /var/run/sudo\
+chmod 700 /var/run/sudo\
+reboot\
+\
+The system should reboot and either log you in or present the login screen, whichever you have it configured to do. Log in as yourself and follow the instructions in "For the CLI Impaired".}
