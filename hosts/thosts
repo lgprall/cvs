@@ -1,0 +1,186 @@
+#!/usr/bin/perl -w
+
+# thosts
+# $Id: thosts,v 1.4 2004/05/03 02:10:44 larry Exp $ $Name:  $
+# Threaded app to hit lots of http servers
+# Most print statements are more in the nature of debugging aids at the moment
+# than intended output, but are useful natheless
+
+use strict;
+use threads;
+use threads::shared;
+use Net::hostent;
+use Socket;
+use LWP::UserAgent;
+use HTTP::Request;
+use Getopt::Std;
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
+
+use vars qw{ $opt_d $opt_t $opt_f $opt_o };
+
+( my $ME = $0 ) =~ s@.*/@@;
+
+my $USAGE = qq(USAGE: $ME [-d depth][-t threads][-o out_file][-f in_file] [site0 site1...]\n);
+
+die $USAGE unless getopts("d:t:f:o:");
+
+# $MAX is the number of times we'll collect sites and dig deeper
+my $MAX = $opt_d || 3;
+$MAX =~ /^\d+$/ or $MAX = 3;
+
+# $workers is just the number of threads we'll use
+my $workers = $opt_t || 6;
+$workers =~ /^\d+$/ or $workers = 6;
+
+my @HOSTS : shared;
+if ( $opt_f ) {
+	die $USAGE if @ARGV;
+	die qq(Can't read "$opt_f": $!\n) unless -r $opt_f;
+	open IN, "<$opt_f";
+	@HOSTS = <IN>;
+} elsif ( @ARGV ) {
+	@HOSTS = @ARGV;
+} else {
+	@HOSTS = <DATA>;
+}
+
+my $IPS = $opt_o || "$ENV{HOME}/iplist$$";
+# We're going to open and then close the output file each time we write to it so
+# that we can keep as much output as possible in case things get interrupted.
+open IPS, ">$IPS" or die qq(Can't write to "$opt_o": $!\n);
+close IPS;
+
+# The %visited hashes will be written to by each of the threads, and will keep
+# track of the IPs and names visited (and prevent revisits).
+my %visited_ips : shared;
+my %visited_names : shared;
+
+# @level is an array of hashes which the threads will use to collect
+# hostnames/ports for the next "level" -- again deduping is automatic
+my @level;
+for ( my $i = 0; $i <= $MAX; $i++ ) {
+	$level[$i] = {};
+	share( $level[$i] );
+}
+
+# The @threads array is just used to keep track of the threads
+my @threads;
+
+# The $count will be used as an index in to the @level array
+my $count : shared = 0;
+
+# It would be nice if we could get to the END block if the script
+# were untimely deceased, but with threads that doesn't happen
+END {
+	exit 0 unless @threads;
+	print "Finishing up after level $count...\n";
+	# Just to clean up
+	$_->join for @threads;
+
+	for ( my $i = 0; $i < $MAX; $i++ ) {
+		print "Level $i checked: ", scalar keys %{$level[$i]}, " hosts\n";
+	}
+	print "Total ", scalar keys %visited_ips, " IPs visited.\n";
+	open IPS, ">$IPS" or warn "Couldn't open $IPS: $!\n";
+	print IPS "$_\n" for keys %visited_ips;
+	close IPS;
+}
+
+$| = 1;
+print "Starting with ", scalar @HOSTS, " hosts.\n";
+
+push @threads, threads->create(\&hitem) for 1 .. $workers;
+
+# The main program loops though "$MAX" cycles of waiting for the threads to
+# empty the @HOSTS array, then filling it back up with the hosts collected by
+# the threads
+# We need to start the loop one extra time so that we can count the visited
+# hosts, but we'll exit it early on the last time through.
+while ( $count <= $MAX ) {
+	print "\n------------ Starting level $count --------------\n";
+	while ( @HOSTS ) {
+		sleep 10;
+		print "In level $count of $MAX: ", scalar keys %visited_ips, " hosts visited --  ";
+		system("date");
+		open IPS, ">$IPS" or warn "Couldn't open $IPS: $!\n";
+		print IPS "$_\n" for keys %visited_ips;
+		close IPS;
+	}
+	sleep 5;
+	# See?
+	exit 0 if $count == $MAX;
+	print "End of level $count. ";
+	print "Visited ", scalar keys %visited_ips, " hosts so far\n";
+	lock $level[$count];
+	lock @HOSTS;
+	lock %visited_names;
+	foreach ( keys %{$level[$count++]} ) {
+		push @HOSTS, $_ unless $visited_names{$_}++;
+	}
+	print "Will be checking ", scalar @HOSTS, " more hosts next level.\n";
+}
+
+####  END ####
+
+sub hitem {
+	my $host;
+	my $me = threads->self->tid();
+	my $ua = LWP::UserAgent->new();
+	$ua->agent("Mozilla/4.0");
+	$ua->timeout(30);
+	# We'll slurp up one host at a time from @HOSTS and process it
+	HOST:
+	while ( @HOSTS or $count < $MAX) {
+		unless ( @HOSTS ) { print "thread $me sleeping...\n"; sleep 5;next; }
+		{ lock(@HOSTS); $host = shift @HOSTS; }
+		chomp $host;
+		# This is to split apart the base host and any port designation
+		$host =~ s/(:\d+)$// and (my $port = $1) =~ s/^://;
+		my $h;
+		# Probably should modify this so that we can handle IP addresses as well as
+		# host names
+		unless ($h = gethost( $host ) ){
+			warn "Thread $me: no such host: $host\n";
+			next;
+		}
+		my $tgt;
+		# We'll loop through all of the addresses assigned to this host
+		foreach ( @{$h->addr_list} ) {
+			# Convert to an ascii address
+			$tgt = inet_ntoa($_);
+			# And add the port back, if any
+			$tgt .= ":$port" if $port;
+			
+			# Update the %visited_ips hash, and skip if this address is already there
+			{ lock %visited_ips; next HOST if $visited_ips{$tgt}++; }
+			# Have to add the port back to the hostname as well
+			$host = "http://" . $host unless $host =~ m@\Ahttp://@;
+			$host .= ":$port" if $port;
+			{ lock %visited_names; next HOST if $visited_names{$host}++; }
+			my $req = HTTP::Request->new(GET => $host);
+			# GIFS?  We don't need no stinkin' GIFS!
+			$req->header(Accept => 'text/*');
+			my $resp = $ua->request($req);
+			if ($resp->is_error() ) {
+				# We updated the hash a little prematurely; if we can't actually reach the
+				# host, we take it all back
+				{lock %visited_ips; delete $visited_ips{$tgt};}
+			} else {
+				print "Thread $me visited $host\n";
+				# Grab the page as a single string..
+				my $content = $resp->content();
+				# Pull all of the likely URLS into an array...
+				my @tmp = $content =~ /http:\/\/(.*?)[^.:\-\w]/msg;
+				# And update the hash for the next level
+				foreach my $url ( @tmp ) {
+					{lock $level[$count]; $level[$count]{$url}++; }
+				}	
+			}
+			# Be a good sport about the whole thing
+			threads->yield();
+		}
+	}
+}
+
+__DATA__
+www.ryukyushimpo.co.jp
