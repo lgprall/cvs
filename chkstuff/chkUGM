@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# chkUGM (v1.1.5) updated to track 10.1.3 update and 10.1.3Combo update
+# chkUGM (v1.1.6) updated to track SecurityUpdateApril2002
 # This script reads the bom files from installed software on a MacOS X system
 # and compares the current modes, owners, and groups of installed files to
 # those when they were installed.  It generates a shell script which can be run
@@ -24,6 +24,7 @@ my @BOMS = (
 	"/Library/Receipts/MacOSXUpdate10.1.1.pkg/Contents/Resources/MacOSXUpdate10.1.1.bom",
 	"/Library/Receipts/MacOSXUpdate10.1.2.pkg/Contents/Resources/MacOSXUpdate10.1.2.bom",
 	"/Library/Receipts/MacOSXUpdate10.1.3.pkg/Contents/Resources/MacOSXUpdate10.1.3.bom",
+	"/Library/Receipts/SecurityUpdateApril2002.pkg/Contents/Resources/SecurityUpdateApril2002.bom",
 	);
 # A bit of a kludge added to handle the combo updates
 my $combo2 = "/Library/Receipts/MacOSXUpdateCombo10.1.2.pkg/Contents/Resources/MacOSXUpdateCombo10.1.2.bom";

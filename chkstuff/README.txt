@@ -11,7 +11,7 @@ for its riveting plot.  Any files which are not of the same type
 they should be are flagged as fatal errors, since the script can't
 do anything about them, but the script will still run to completion.
 Missing files are reported, but otherwise ignored.  There will
-probably be a lot of them, some of the originally installed apps
+probably be a lot of them; some of the originally installed apps
 will have been replaced, some applications may have been moved,
 and some files may simply have been removed. Netinfo database files
 are ignored, since most of the installed files will have been
