@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 # thosts
-# $Id: thosts,v 1.1 2004/05/03 02:16:17 larry Exp $ $Name:  $
+# $Id: thosts,v 1.2 2004/05/04 00:55:02 larry Exp $ $Name:  $
 # Threaded app to hit lots of http servers
 # Most print statements are more in the nature of debugging aids at the moment
 # than intended output, but are useful natheless
@@ -97,14 +97,20 @@ push @threads, threads->create(\&hitem) for 1 .. $workers;
 # the threads
 # We need to start the loop one extra time so that we can count the visited
 # hosts, but we'll exit it early on the last time through.
-while ( $count <= $MAX ) {
-	print "\n------------ Starting level $count --------------\n";
-	while ( @HOSTS ) {
+ONE: while ( 1 ) {
+	{ 
+		lock $count;
+		last ONE if $count > $MAX;
+		print "\n------------ Starting level $count --------------\n";
+	}
+	TWO: while ( 1 ) {
+		{ lock( @HOSTS ); last TWO unless @HOSTS; }
 		sleep 10;
 		{ 
 			lock %visited_ips;
-			print "In level $count of $MAX: ", scalar keys %visited_ips, " hosts visited --  ";
-			system("date");
+			lock $count;
+			my $date = `date`;
+			print "In level $count of $MAX: ", scalar keys %visited_ips, " hosts visited --  $date";
 			open IPS, ">$IPS" or warn "Couldn't open $IPS: $!\n";
 			print IPS "$_\n" for keys %visited_ips;
 			close IPS;
@@ -112,17 +118,20 @@ while ( $count <= $MAX ) {
 	}
 	sleep 5;
 	# See?
-	exit 0 if $count == $MAX;
-	print "End of level $count. ";
-	lock $level[$count];
-	lock @HOSTS;
-	lock %visited_ips;
-	lock %visited_names;
-	print "Visited ", scalar keys %visited_ips, " hosts so far\n";
-	foreach ( keys %{$level[$count++]} ) {
-		push @HOSTS, $_ unless $visited_names{$_}++;
+	{ 
+		lock($count);
+		exit 0 if $count == $MAX;
+		print "End of level $count. ";
+		lock $level[$count];
+		lock @HOSTS;
+		lock %visited_ips;
+		lock %visited_names;
+		print "Visited ", scalar keys %visited_ips, " hosts so far\n";
+		foreach ( keys %{$level[$count++]} ) {
+			push @HOSTS, $_ unless $visited_names{$_}++;
+		}
+		print "Will be checking ", scalar @HOSTS, " more hosts next level.\n";
 	}
-	print "Will be checking ", scalar @HOSTS, " more hosts next level.\n";
 }
 
 ####  END ####
@@ -135,9 +144,19 @@ sub hitem {
 	$ua->timeout(30);
 	# We'll slurp up one host at a time from @HOSTS and process it
 	HOST:
-	while ( @HOSTS or $count < $MAX) {
-		unless ( @HOSTS ) { print "thread $me sleeping...\n"; sleep 5;next; }
-		{ lock(@HOSTS); $host = shift @HOSTS; }
+	while ( 1 ) {
+		{
+			my $HOSTS;
+			{ lock( @HOSTS ); $HOSTS = @HOSTS; }
+			unless ( $HOSTS ) {
+				{
+					lock $count; last HOST if $count == $MAX;
+				}
+				print "thread $me sleeping...\n"; sleep 5;next HOST;
+			}
+			{ lock @HOSTS; $host = shift @HOSTS; }
+		}
+		next HOST unless $host;
 		chomp $host;
 		# This is to split apart the base host and any port designation
 		$host =~ s/(:\d+)$// and (my $port = $1) =~ s/^://;
@@ -145,7 +164,7 @@ sub hitem {
 		# Probably should modify this so that we can handle IP addresses as well as
 		# host names
 		unless ($h = gethost( $host ) ){
-			warn "Thread $me: no such host: $host\n";
+			warn "[Thread $me] no such host: $host\n";
 			next;
 		}
 		my $tgt;
@@ -178,7 +197,7 @@ sub hitem {
 				my @tmp = $content =~ /http:\/\/(.*?)[^.:\-\w]/msg;
 				# And update the hash for the next level
 				foreach my $url ( @tmp ) {
-					{lock $level[$count]; $level[$count]{$url}++; }
+					{lock $count; lock $level[$count]; $level[$count]{$url}++; }
 				}	
 			}
 			# Be a good sport about the whole thing
