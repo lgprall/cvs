@@ -26,6 +26,7 @@ my @BOMS = (
 	"/Library/Receipts/MacOSXUpdate10.1.3.pkg/Contents/Resources/MacOSXUpdate10.1.3.bom",
 	"/Library/Receipts/SecurityUpdateApril2002.pkg/Contents/Resources/SecurityUpdateApril2002.bom",
 	"/Library/Receipts/MacOSXUpdate10.1.4.pkg/Contents/Resources/MacOSXUpdate10.1.4.bom",
+	"/Library/Receipts/MacOSXUpdate10.1.5.pkg/Contents/Resources/MacOSXUpdate10.1.5.bom",
 	);
 # A bit of a kludge added to handle the combo updates
 my $combo2 = "/Library/Receipts/MacOSXUpdateCombo10.1.2.pkg/Contents/Resources/MacOSXUpdateCombo10.1.2.bom";
@@ -67,7 +68,6 @@ sub chkmode {
 	}
 }
 
-my $root;
 chdir "/";
 # Since we expect a lot of files to be missing, we won't clutter the display
 # with them.
@@ -95,9 +95,6 @@ while (<@BOMS>) {
 			$filecount = 0;
 		}
 		my ( $file, $mode, $ug) = (split /\t/, $_);
-		# We only want to process root once
-		next if $file eq "." and  $root;
-		$root++ if $file eq ".";
 		# We can't change these anyway, so forget about them
 		next if  $file eq "./.vol" or $file eq "./dev";
 		# No point in worrying about symlinks
