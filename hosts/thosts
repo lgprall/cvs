@@ -1,11 +1,12 @@
 #!/usr/bin/perl -w
 
 # thosts
-# $Id: thosts,v 1.2 2004/05/04 00:55:02 larry Exp $ $Name:  $
+# $Id: thosts,v 1.3 2004/05/05 00:41:27 larry Exp $ $Name:  $
 # Threaded app to hit lots of http servers
 # Most print statements are more in the nature of debugging aids at the moment
 # than intended output, but are useful natheless
 
+require 5.008;
 use strict;
 use threads;
 use threads::shared;
@@ -97,6 +98,8 @@ push @threads, threads->create(\&hitem) for 1 .. $workers;
 # the threads
 # We need to start the loop one extra time so that we can count the visited
 # hosts, but we'll exit it early on the last time through.
+# The loops are ugly because of locking considerations; we can't use a shared 
+# variable in our EXPR for 'while'
 ONE: while ( 1 ) {
 	{ 
 		lock $count;
@@ -130,6 +133,8 @@ ONE: while ( 1 ) {
 		foreach ( keys %{$level[$count++]} ) {
 			push @HOSTS, $_ unless $visited_names{$_}++;
 		}
+		# @HOSTS is refilled; go get 'em!
+		cond_broadcast @HOSTS;
 		print "Will be checking ", scalar @HOSTS, " more hosts next level.\n";
 	}
 }
@@ -152,7 +157,10 @@ sub hitem {
 				{
 					lock $count; last HOST if $count == $MAX;
 				}
-				print "thread $me sleeping...\n"; sleep 5;next HOST;
+				print "thread $me sleeping...\n";
+				lock @HOSTS;
+				cond_wait( @HOSTS);
+				next HOST;
 			}
 			{ lock @HOSTS; $host = shift @HOSTS; }
 		}
@@ -205,6 +213,45 @@ sub hitem {
 		}
 	}
 }
+
+=head1 NAME
+
+thosts - an app to retrieve index pages from lots of hosts
+
+=head1 SYNOPSIS
+
+	thosts [-d depth][-t threads][-o out_file][-f in_file] [site0 site1...]
+	
+=head1 DESCRIPTION
+
+B<thosts> takes a list of domain names which are believed to serve http and collects the index pages from each, parses them for other URLS, collects the index pages from them and so ad infinitum.  Or at least ad depth.  It uses multiple threads to do its work.
+
+The depth is passed on the command line with I<-d>; the default is three. The number of threads is passed with I<-t>; the default is six. The list of starting hosts can be passed as arguments on the command line or put in a text file, one per line, and the file passed as the I<-f> option.  It is an error to have both a I<-f> option and arguments.  If there is on I<-f> option and no hosts are passed on the command line, a default list of hosts will be used (quite long and quite arbitrary).
+
+The purpose of the script is to generate responses from a wide variety of hosts to provide fodder for B<RNA>. Since there is no compelling need to ensure that absolutely every possible host is hit some short cuts are taken.  In particular, an URL of the form "http://123.45.67.89" retrieved from a web page will fail even though it might be quite a legitimate host.
+
+To the extent possible, we try not to visit a host more than once, whether the host is identified by host name or IP address.
+
+=head1 OUTPUT
+
+B<thosts> spews quite a bit of information to standard out, including a list of the hosts visited.  It also writes a file containing an unordered list of IP addresses visited.  The default file is written to the user's home directory with the name 'iplistxxxxx' where the x's represent the PID; an alternate file can be passed on the command line using the I<-o> option. Other scripts are (or will be) available to sort the IPs in a reasonable order and to compare the list of visited IPs to the rna_ip_host table.
+
+=head1 CAUTION
+
+B<thosts> can consume quite a bit of incoming bandwidth.  The default number of threads is probably a little high to use during business hours, but three or four threads is probably acceiptable.
+
+=head1 REQUIRES
+
+LWP bundle, perl with ithreads (5.8 or later)
+perlpod
+
+
+=head1 AUTHOR
+
+Larry Prall
+
+=cut
+
 
 __DATA__
 drudgereport.com
