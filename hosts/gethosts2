@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 # get_hosts
-# $Id$  $Name$
+# $Id: gethosts2,v 1.1 2004/06/14 00:09:38 larry Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 
 use strict;
@@ -287,11 +287,16 @@ sub serve {
 		}
 		my $t1 = time;
 		open TIME, "<$time_path";
+		unless (flock(TIME, LOCK_SH | LOCK_NB)) {
+			flock(TIME, LOCK_SH);
+		}
 		chomp (my $time = <TIME> );
 		my $interval = $t1 - $time;
 		if ( $t1 - $time > 9 ) {
 			close TIME;
-			open TIME, ">$time_path";
+			sysopen( TIME, "$time_path", O_WRONLY | O_CREAT);
+			flock(TIME, LOCK_EX);
+			truncate(TIME, 0);
 			print TIME "$t1\n";
 			print "\n######\n## Total of $total hosts visited -- ", scalar localtime($t1), ".\n######\n\n"
 		}
@@ -355,7 +360,8 @@ sub getem {
 				# This is somewhat redundant, but it may save some time
 				# on the server end.
 				next if $hosts{$tgt}++;
-				next unless $h = gethost( $tgt );
+				(my $host = $tgt) =~ s/:\d+$//;
+				next unless $h = gethost( $host );
 				my $ips = join ",", map { inet_ntoa($_) } @{$h->addr_list};
 				$string .= "$tgt#$ips|";
 			}
