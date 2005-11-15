@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 # get_hosts
-# $Id: gethosts2,v 1.3 2004/08/17 12:45:25 larry Exp $  $Name:  $
+# $Id: gethosts2,v 1.4 2005/05/23 15:14:15 larry Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 
 use strict;
@@ -51,7 +51,7 @@ GetOptions( 'help' => \$help,
             'procs=i' => \$procs,
             'out=s'   => \$out,
             'file=s'    => \$file ) or die $USAGE;
-            
+
 if ( defined $out ) {
 	if ( -f $out ) {
 		print "Can't overwrite an existing file: $out.\n";
@@ -327,7 +327,7 @@ sub getem {
 	my $host;
 	my $me = $ID;
 	my $ua = LWP::UserAgent->new();
-	$ua->agent("Mozilla/4.0");
+	$ua->agent("Mozilla/5.0 (compatible; Konqueror/3; Linux)");
 	$ua->timeout(30);
 	
 	$SIG{PIPE} = sub { exit 0; };
@@ -642,6 +642,7 @@ www.autoindustry.co.uk
 www.axisoflogic.com
 www.ba.net
 www.bacan.com
+www.bangkokpost.com
 www.barefeats.com
 www.bbc.co.uk
 www.beijixing.com.cn
@@ -652,12 +653,16 @@ www.big-bang.com
 www.billboard.com
 www.bizportal.co.il
 www.bloomberg.com
+www.bmwusa.com
 www.bolivian.com
 www.boliviaweb.com
 www.boston.com
 www.br.aol.com
 www.bradesco.com.br
 www.brujula.cl
+www.bugzilla.com
+www.bugzilla.org
+www.bugzilla.net
 www.buscame.com
 www.buscapique.com
 www.cade.com.br
@@ -709,6 +714,7 @@ www.cyprus2000.com
 www.dailyemerald.com
 www.dailynewslosangeles.com
 www.dailyrecord.co.uk
+www.danny.com
 www.data.ru
 www.dealsontheweb.com
 www.denverpost.com
@@ -781,6 +787,9 @@ www.globes.co.il
 www.go.com
 www.gogreece.com
 www.goldenvillage.com
+www.goldfish.com
+www.golfdiscount.com
+www.golf.com
 www.google.com
 www.goyoyo.cq.cn
 www.gr-indexer.gr
@@ -830,6 +839,7 @@ www.inetg.com
 www.info.co.cr
 www.infocop.com
 www.infoguiaweb.com
+www.infospace.com
 www.ingrid.org
 www.insanely-great.com
 www.insanelygreatmac.com
@@ -869,6 +879,7 @@ www.kenstone.net
 www.khoj.com
 www.kompass.ie
 www.kor-seek.com
+www.korea.com
 www.kufta.com
 www.kuwaitonline.com
 www.lafcpug.org
@@ -984,6 +995,7 @@ www.myapplemenu.com
 www.mymac.com
 www.myrice.com
 www.nana.co.il
+www.nakhonpathom.com
 www.nationalenquirer.com
 www.nationalreview.com
 www.netc.pt
@@ -1080,9 +1092,12 @@ www.rollcall.com
 www.ru
 www.rucity.com
 www.rushlimbaugh.com
+www.saabusa.com
+www.sabay.com
 www.sacbee.com
 www.salon.com
 www.santacruzsentinel.com
+www.sanook.com
 www.saudi-pages.com
 www.saudiarabia.net
 www.sciam.com
@@ -1126,6 +1141,7 @@ www.stpt.com
 www.stuff.co.nz
 www.stuffmagazine.co.uk
 www.sunet.se
+www.sun.com
 www.suntimes.com
 www.supermall.co.il
 www.surf-bits.com
@@ -1141,6 +1157,7 @@ www.techtree.com
 www.tela.dux.ru
 www.telegraph.co.uk
 www.terere.com
+www.thailand.com
 www.theage.com.au
 www.theaustralian.news.com.au
 www.thebostonchannel.com
@@ -1187,6 +1204,7 @@ www.usnews.com
 www.usnewswire.com
 www.usps.gov
 www.utopia.co.nz
+www.vw.com
 www.vefur.is
 www.versiontracker.com
 www.vietgate.net
