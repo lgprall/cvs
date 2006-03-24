@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 # get_hosts
-# $Id: gethosts2,v 1.5 2005/11/15 17:41:01 larry Exp $  $Name:  $
+# $Id: gethosts2,v 1.6 2005/11/15 18:08:55 larry Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 
 use strict;
@@ -326,14 +326,15 @@ sub serve {
 sub getem {
 	my $host;
 	my $me = $ID;
-	my @USER_AGENTS = ("Mozilla/5.0 (compatible; Konqueror/3; Linux)",
+	my @USER_AGENTS = ("Mozilla/5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit/416.11 (KHTML, like Gecko) Safari/416.12",
+		"Mozilla/5.0 (compatible; Konqueror/3.4; Linux) KHTML/3.4.0 (like Gecko)",
 		"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)",
 		"Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.7.8) Gecko/20050511 Firefox/1.0.4",
-		"Mozilla/5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit/416.11 (KHTML, like Gecko) Safari/416.12",
+		"Mozilla/4.0 (compatible; MSIE 5.23; Mac_PowerPC)"
 		);
 		
 	my $ua = LWP::UserAgent->new();
-	my $agent = $USER_AGENTS[int(rand(4))];
+	my $agent = $USER_AGENTS[ int(rand(@USER_AGENTS))];
 	$ua->agent($agent);
 	$ua->timeout(30);
 	
