@@ -1,23 +1,28 @@
 #!/usr/bin/perl 
 
 # rnaparse.pl - parse the output of Andy's 'reader' command, which is run on rna.bin.* files
-# @(#) $Id$
+# @(#) $Id: rnaparse.pl,v 1.1.1.1 2006/09/27 20:45:36 larry Exp $
 #
 
 use strict;
 use warnings;
 use Getopt::Long;
 
-my ($quiet, $help);
+my ($quiet, $iponly, $help);
 ( my $cmd=$0) =~ s@.*/@@;
 
 GetOptions ("quiet" => \$quiet,
+	"iponly" => \$iponly,
 	"help|?" => \$help );
 
 die qq(
-$cmd [-q] [input file]
+USAGE: $cmd [-quiet] [-iponly] [input file]
+   Takes the output of the 'reader' command and checks it for multiple unknown OS updates
+   on the same host.
+   
    input file defaults to "output.txt"
-   -q suppresses detailed output
+   -q, -quiet suppresses detailed output
+   -i, -iponly prints only the problem IP addresses
 ) if $help;
 
 my $file = shift || "output.txt";
@@ -48,11 +53,15 @@ while ( @events ) {
 
 
 my %bad;
-foreach my $ip ( sort keys %ips ) {
+foreach my $ip ( sort ipsort keys %ips ) {
 	# If we find more than one unknown OS update, print the IP and all data
 	if ( 1 <  scalar grep /cafe/, @{$ips{$ip}} ) {
-		print "$ip:\n@{$ips{$ip}}\n\n" unless $quiet;
 		$bad{$ip}++;
+	        if ( $iponly ) {
+			print( "$ip\n"), next;
+		} elsif ( not $quiet ) {
+			print "$ip:@{$ips{$ip}}\n\n";
+		}
 	}
 	
 }
@@ -65,3 +74,11 @@ print "Found ";
 print scalar keys %bad;
 print " hosts with multiple unknown OS updates.\n";
 
+sub ipsort {
+    my ( @a, @b);
+    @a = split /\./, $a;
+    @b = split /\./, $b;
+    for ( my $i = 0; $i < 4; $i++ ) {
+        return $a[$i] <=> $b[$i] if $a[$i] <=> $b[$i];
+    }
+}
