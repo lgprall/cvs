@@ -1,0 +1,354 @@
+#!/usr/bin/perl -w
+###########################################################################
+# safemail 0.1 - a script to produce email with various attachment types
+###########################################################################
+# This version simulates mail from Microsoft Outlook Express 5.0 (Windows)
+# 
+# It optionally includes text (from 'fortune') and always includes at least
+# one attachment. Attachment types are 'wav', 'bmp', 'avi', 'dib',
+# 'mpeg', 'midi', 'jpeg', 'html', and 'scr'.
+#
+# By default, this script sends one email with each type of attachment, and
+# one email with every type of attachment to 'user1@chevelle'.
+
+use strict;
+
+use Net::SMTP;
+use HTML::FromText;
+use Getopt::Long;
+
+use oe;
+use safe;
+
+use vars qw( @Text @Rcpt $fortunes $Help $Mime $Uu $Port $Host );
+
+#########################################################################
+# Change this to suit your environment
+
+use constant DEFRCPT => "user1\@gto.rv.tis.com";
+
+# This may have to be a domain or host known to your SMTP server if it's
+# picky.
+
+use constant DOMAIN => "fasttrack.com";
+
+#########################################################################
+
+(my $Cmd = $0 ) =~ s@^.*/@@;
+my $Usage = <<USAGE ;
+
+Usage:
+$Cmd [--text 0|1|2 ...] [--rcpt user\@host ... ] [--mime|--uu] [--help ]
+$Cmd [ -t n ... -r string ... [-m|-u] [-h|-?] ]
+
+--text 0 generates no text, 1 generates a random fortune, and 2 generates a
+	random long fortune
+--rcpt 'user\@host' sends mail to that user
+Defaults to MIME
+Default recipient is @{[DEFRCPT]}
+
+USAGE
+
+die $Usage unless GetOptions (
+	"text=i"    => \@Text,
+	"rcpt=s"    => \@Rcpt,
+	"fortune=s" => \$fortunes,
+	"help|?"    => \$Help,
+	"mime!"     => \$Mime,
+	"uu!"       => \$Uu,
+	"port=i"    => \$Port,
+	"host=s"    => \$Host,
+);
+die $Usage if $Help;
+
+foreach ( @Text ) {
+	die $Usage if $_ > 2 or $_ < 0;
+}
+my @Attach = ( keys %mime_attach );
+
+# Establish defaults
+@Text = ( 1 ) unless @Text;
+@Rcpt = ( DEFRCPT ) unless @Rcpt;
+$Mime = not $Uu if defined $Uu;
+$Mime = 1 unless defined $Mime;
+$fortunes |= "";
+
+# This will have to change once we incorporate different mailers
+my ( $start_boundary, $end_boundary );
+if ( $Mime ) {
+	$start_boundary = "--" . $oe_win{BOUNDARY};
+	$end_boundary = "--" . $oe_win{BOUNDARY} . "--";
+} else {
+	$start_boundary = $end_boundary = "\n";
+}
+
+# Construct an 'include everything' attachment...
+my $all = join "\n$start_boundary\n", values %mime_attach;
+$mime_attach{ ALL } = $all;
+$all = join "\n", values %uu_attach;
+$uu_attach{ ALL } = $all;
+push @Attach, 'ALL';
+
+open CF, ">chkfile$$";
+open SMTPERR, ">smtpfail$$";
+
+# Wherein we enter a series of nested loops.  Probably not the best way
+# to do this in the long run, since things are going to get exponentially
+# more complicated. We may have to keep the loops, but the guts should
+# probably be moved to subroutines or otherwise handled more smartly.
+# There is almost certainly going to be some other reorg required.
+foreach my $Text ( @Text ) {
+	foreach my $content ( @Attach ) {
+		# This "key" is for identification of the messages through
+		# the system. It lets us piece all of the information in
+		# /var/log/messages together, and also provides an easy (?)
+		# way to tell what's supposed to be in the message when
+		# it shows up on the client.
+		my $Encod = $Mime ? "M" : "U";
+		my $key = "oe" . $Encod . $Text . substr($content,0,2);
+
+		my $mime_header = $oe_win{MIME_HEADERS};
+		my $header = $oe_win{HEADERS};
+		my $preamble =  $Mime ? $oe_win{PREAMBLE} : "";
+		
+		my $payload  = $Mime ? $mime_attach{$content} : $uu_attach{$content};
+
+		my $text = gen_text( $Text, $content );
+
+ 		# Do the deed...
+		# Have had some problems on a busy SMTP server, so
+		# we'll try a few times before we give up.
+		my $tries;
+		my @waits;
+		my @pn = ( Port => $Port ) if defined $Port;
+		my $smtp = Net::SMTP->new( $Host, @pn );
+		until ( ref $smtp eq 'Net::SMTP' ) {
+			my $wait = 1 + int rand 10;
+			sleep $wait;
+			push @waits, $wait;
+#			sleep ++$tries;
+			$smtp = Net::SMTP->new;
+			last if ++$tries > 4;
+		}
+		unless ( ref $smtp eq 'Net::SMTP' ) {
+			my $seq = join ",", @waits;
+			print STDERR "$key$$: Failed to create SMTP object after waits of $seq seconds;
+	giving up.\n";
+			print SMTPERR "$key$$: Failed to create SMTP object after waits of $seq seconds;
+	giving up.\n";
+			next;
+		}
+
+		my $body = $Mime ? $mime_header : "";
+		$body .= "$header
+$preamble
+$text
+$start_boundary
+$payload
+$end_boundary
+" ;
+
+		# Obviously the "To:" line here is non-critical
+		my $mail = qq(To: Whom It May Concern <somebody\@somewhere.rv.tis.com>
+Subject: $content
+$body
+);
+
+ 		# This may (or may not) be changed later.
+ 		my $From = "$key$$\@@{[DOMAIN]}";
+
+		print CF "$From\n";
+ 
+ 		# Do the deed...
+ 		$smtp->mail( $From );
+ 		foreach my $Rcpt ( @Rcpt ) {
+ 			$smtp->to( $Rcpt );
+ 		}
+ 		$smtp->data();
+ 		$smtp->datasend( $mail );
+ 		$smtp->dataend();
+ 		$smtp->quit;
+
+	}
+}
+print "Fin\n";
+
+sub gen_text($) {
+		# The following chunk is more to provide entertainment when
+		# checking the output on the clients than for anything useful.
+		#
+		# The 'text2html' function expects text in the form '_foo_'
+		# for underlining. The 'fortune' call unfortunately uses
+		# one of three forms for underlining:
+		# 1: '_^H_^H_^Hfoo'
+		# 2: '___^H^H^Hbar'
+		# 3: '_^Hb_^Ha_^Hz'
+		# This handles forms 1 and 2 fairly well; form 3 is 
+		# handled so that ugly non-printing characters don't make
+		# it into the recipient's mail, but it may not be underlined
+		# in the HTML output.
+		# There are some shortcomings in the HTML::FromText module
+		# which prevent proper handling of some bold and underlined
+		# forms.  I have patched my copy to handle the stuff put out
+		# by 'fortune', but it hasn't been certified for general use.
+		# If you want the changes, mailto://lprall@nai.com.
+		
+		my ($Text, $content) = @_;
+
+		my ($repl_text, $html_text);
+		my $html_line = $oe_win{HTML_LINE};
+		if ( $Text == 2 ) {
+			$repl_text = `/usr/games/fortune -l $fortunes` ;
+		} elsif ( $Text == 1 ) {
+			$repl_text = `/usr/games/fortune $fortunes` ;
+		} else {
+			$repl_text = "";
+			$html_line =~ s@<FONT.*?</FONT>@\&nbsp;@ if not $Text;
+		}
+		if ( $repl_text =~ /((_)(\w))+/ ) {
+			$repl_text =~ s/(((_)(\w))+)/_$1_/;
+			$repl_text =~ s/(_)(\w)/$2/g;
+		}
+		$repl_text =~ s/((_)+()+)+(\w+)/_$4_/g;
+
+		$html_text = text2html( $repl_text, lines => 1, bold => 1, underline => 1 );
+		$html_line =~ s/HTML_TEXT/$html_text/;
+		$html_line =~ s@<DIV>.*?</DIV>\n@@ if $Text == 0;
+		my $text;
+		if ( $Mime ) {
+			( $text = $oe_win{TEXT} ) =~ s@REPLACEMENT_TEXT@$repl_text@;
+			$text =~ s@REPLACEMENT_HTML@$html_line@;
+		} else {
+			$text = $repl_text;
+		}
+
+		return $text;
+}
+
+__END__
+
+=head1 NAME
+
+safe - send email with various MIME-type attachments
+
+=head1 SYNOPSIS
+
+B<safe> [B<--text 0|1|2 ...>] [B<--mime|--uu>] [B<--rcpt user\@host ... >] [B<--help>]
+
+B<safe> [B<-t n ...>] [B<-m|-u>] [B<-r s ...>] [B<-?|-he>]
+
+=head1 DESCRIPTION
+
+I<safe> sends multiple pieces of email as though coming from I<Outlook Express>. One piece of mail will contain all supported MIME-types, while the others will contain one each of the supported types. They may be sent using either uuencoding or MIME. It is commonly used in a script where it may be repeated multiple times with different combinations of options. 
+
+=head2 Format
+
+To facilitate analysis, the "sender" of each message is a constructed string which tells what attachments are contained in the message, whether text was included, and which encoding was used.
+
+For example:
+
+	oeM1AV12345
+	0123456~ 
+	0-1 : Mailer (Outlook Express)
+	2   : M - MIME encoding; U - UUencoding
+	3   : "Text" level
+	3-4 : MIME-type
+	4   : Total number of attachments
+	5   : B - BubbleBoy; x - no BubbleBoy
+	6-10: PID
+
+=head2 Output
+
+Each iteration of B<safe> produces an output file containing a list of all of the "senders" and the types of attachments in that email.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help|-he|-?> help
+
+Prints out a brief help message.
+
+=item B<--text|-t 0|1|2> text
+
+Include optional random text (generated by I<fortune>. With an argument of B<0>, no text is included; with B<2>, long text is included, and with B<1> (the default) text of any length is included. If the option is repeated, mail is sent with both options: i.e., B<-t 0 -t 2> would send an equal number of emails with no text and with long text.
+
+=item B<--uu|-u> - use UUencoding for attachments.
+
+=item B<--rcpt|-r user@host> - send to this recipient. Multiple B<rcpt> options will send the complete set of emails to all recipients.
+
+=back
+
+=head1 ERRORS
+
+B<safe> tries five times to establish an SMTP connection with the server. If it fails after five attempts, an "smtpfail55555" file (where "55555" represents the PID) will be written in the current directory containing the "sender" of the mail which could not be sent.
+
+=head1 ENVIRONMENT
+
+The modules (I<oe.pm> and I<safe.pm> used by B<safe> must be placed in a directory where they can be read; probably the best place is a I<lib> (or other name) directory in your home directory which you include in your B<PERL5LIB> environment variable.
+
+Besides its own modules B<safe> needs several other modules to run:
+
+=over 4
+
+=item B<Net::SMTP>
+
+=item B<HTML::FromText>
+
+=back
+
+All of these modules are available from CPAN.
+
+Be default B<mailem> connects to port 25 on the smtp server specified in I<libnetc.cfg>. To override the server on a semi-permanent basis, you can create a I<.libnetrc> file in your home directory containing an entry like:
+
+	{
+		smtp_hosts => ['10.11.0.9'],
+	}
+
+where 10.11.0.9 is the IP address of your SMTP host.
+
+=head1 FILES
+
+F<safe.pm>
+F<oe.pm>
+
+=head1 SEE ALSO
+
+B<checksafe>
+B<mailem>
+B<parse>
+
+=head1 NOTES
+
+The MIME types currently included are:
+
+=over 4
+
+=item B<WAV> - audio/wav: Sound50.wav
+
+=item B<BMP> - image/bmp: Blue Lace16.bmp
+
+=item B<AVI> - vidio/avi: clock.avi
+
+=item B<DIB> - image/bmp: Dib.dib
+
+=item B<MPEG> - video/mpeg: kelvin.mpeg
+
+=item B<MIDI> - audio/mid: Mozart's Symphony No. 40.RMI
+
+=item B<JPEG> - image/jpeg: Mvpaaa0q.jpg
+
+=item B<HTML> - text/html: olddefault.htm
+
+=item B<SCR> - application/octet-stream: black16.scr
+
+=item B<QT> - video/quicktime: mimposs.mov 
+
+=back
+
+The key used in the sender string is just the first two letters of the type, "AL" indicates that all attachments are included.
+
+
+=head1 AUTHOR
+
+Larry Prall <lprall@nai.com>

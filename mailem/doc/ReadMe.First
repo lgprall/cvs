@@ -1,0 +1,42 @@
+The SMTP test scripts are used to send email from a Unix box through an
+SMTP server to a UNIX client (presumably a POP server). (It is possible
+that they could be made to run from ActiveState perl on a Win32 box if
+all of the required modules are available; I haven't tried it, but I
+don't believe that they are.)
+
+To use the test scripts, you will need a complete perl installation and
+some additional modules. Perl version 5.005_03 was used during development,
+but I believe that 5.004 will work as well; 5.003 probably will not work
+without some editing.
+
+Additional modules required are:
+	Net::SMTP
+	HTML::FromText
+	MIME::Base64
+	Convert::UU
+	Digest::MD5
+
+All of these are available from CPAN. (If you haven't used CPAN, see
+README.CPAN.)
+
+Once you have your perl installation ready, you can run the scripts. The
+easiest way to run them is to untar them into a single directory and run
+them from there. If you want to run them from a different location, you
+will have to put the four executables somewhere in your path, and the
+library (*.pm) files somewhere in perl's "@INC" (You can find those
+locations by running the command:
+perl -e 'print "@INC\n"'
+from the command line.)
+If you want to create your own directory for the library files, you can
+do so, and then add PERL5LIB=/name/of/your/directory to your environment
+using the procedure appropriate to your shell of choice.
+
+All of the commands have a usage statement which you can display by
+using the '--help', '-h', or '-?' options.
+
+The 'parse.big' and 'checksafe.big' scripts are functionally identical to
+their unsuffixed counterparts. They are used to handle mail files too large
+for the other scripts to fit into memory; details are in the "Note.bigvers"
+file.
+
+

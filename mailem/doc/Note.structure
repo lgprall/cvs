@@ -1,0 +1,24 @@
+Regarding the structure of the 'parse' script:
+
+The 'analyze' subroutine initializes the '@msg' array each time it is
+called.  It seems that initializing the array once as a package variable
+would save time, even though it would require additional time to process
+the embedded variables (which must then all be package rather than lexical
+variables as well). In fact, when I benchmarked only the processing of
+the array within the subroutine as compared to initializing it externally
+(either inline or within a module) the external initialization took
+only about two-thirds the time (is that 33% faster or 50% faster?). So
+I made a copy of the complete 'parse' script with the modified 'analyze'
+subroutine. It's actually considerably uglier, since it requires split
+parsing of the arguments to the subroutine with some of them assigned to
+lexical variables and the rest as package variables, and forces "no
+strict 'vars'" and "no strict 'refs'" within the subroutine. It was
+therefore somewhat gratifying to find that timing the total runtime of
+both versions of 'parse' showed the modified version to be very slightly
+slower than the original. It wasn't actually a benchmark, since it was
+only a couple of runs (as opposed to 100000 runs per shot on the
+benchmark) and the difference in times was very small (somewhat less
+than 29 seconds for the original, somewhat more than 29 seconds for the
+"optimized" version), but it convinced me to leave things as they
+were.
+

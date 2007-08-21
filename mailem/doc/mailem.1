@@ -1,0 +1,349 @@
+.rn '' }`
+''' $RCSfile$$Revision$$Date$
+'''
+''' $Log$
+'''
+.de Sh
+.br
+.if t .Sp
+.ne 5
+.PP
+\fB\\$1\fR
+.PP
+..
+.de Sp
+.if t .sp .5v
+.if n .sp
+..
+.de Ip
+.br
+.ie \\n(.$>=3 .ne \\$3
+.el .ne 3
+.IP "\\$1" \\$2
+..
+.de Vb
+.ft CW
+.nf
+.ne \\$1
+..
+.de Ve
+.ft R
+
+.fi
+..
+'''
+'''
+'''     Set up \*(-- to give an unbreakable dash;
+'''     string Tr holds user defined translation string.
+'''     Bell System Logo is used as a dummy character.
+'''
+.tr \(*W-|\(bv\*(Tr
+.ie n \{\
+.ds -- \(*W-
+.ds PI pi
+.if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+.if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
+.ds L" ""
+.ds R" ""
+'''   \*(M", \*(S", \*(N" and \*(T" are the equivalent of
+'''   \*(L" and \*(R", except that they are used on ".xx" lines,
+'''   such as .IP and .SH, which do another additional levels of
+'''   double-quote interpretation
+.ds M" """
+.ds S" """
+.ds N" """""
+.ds T" """""
+.ds L' '
+.ds R' '
+.ds M' '
+.ds S' '
+.ds N' '
+.ds T' '
+'br\}
+.el\{\
+.ds -- \(em\|
+.tr \*(Tr
+.ds L" ``
+.ds R" ''
+.ds M" ``
+.ds S" ''
+.ds N" ``
+.ds T" ''
+.ds L' `
+.ds R' '
+.ds M' `
+.ds S' '
+.ds N' `
+.ds T' '
+.ds PI \(*p
+'br\}
+.\"	If the F register is turned on, we'll generate
+.\"	index entries out stderr for the following things:
+.\"		TH	Title 
+.\"		SH	Header
+.\"		Sh	Subsection 
+.\"		Ip	Item
+.\"		X<>	Xref  (embedded
+.\"	Of course, you have to process the output yourself
+.\"	in some meaninful fashion.
+.if \nF \{
+.de IX
+.tm Index:\\$1\t\\n%\t"\\$2"
+..
+.nr % 0
+.rr F
+.\}
+.TH MAILEM 1 "perl 5.005, patch 03" "20/Jun/2000" "User Contributed Perl Documentation"
+.UC
+.if n .hy 0
+.if n .na
+.ds C+ C\v'-.1v'\h'-1p'\s-2+\h'-1p'+\s0\v'.1v'\h'-1p'
+.de CQ          \" put $1 in typewriter font
+.ft CW
+'if n "\c
+'if t \\&\\$1\c
+'if n \\&\\$1\c
+'if n \&"
+\\&\\$2 \\$3 \\$4 \\$5 \\$6 \\$7
+'.ft R
+..
+.\" @(#)ms.acc 1.5 88/02/08 SMI; from UCB 4.2
+.	\" AM - accent mark definitions
+.bd B 3
+.	\" fudge factors for nroff and troff
+.if n \{\
+.	ds #H 0
+.	ds #V .8m
+.	ds #F .3m
+.	ds #[ \f1
+.	ds #] \fP
+.\}
+.if t \{\
+.	ds #H ((1u-(\\\\n(.fu%2u))*.13m)
+.	ds #V .6m
+.	ds #F 0
+.	ds #[ \&
+.	ds #] \&
+.\}
+.	\" simple accents for nroff and troff
+.if n \{\
+.	ds ' \&
+.	ds ` \&
+.	ds ^ \&
+.	ds , \&
+.	ds ~ ~
+.	ds ? ?
+.	ds ! !
+.	ds /
+.	ds q
+.\}
+.if t \{\
+.	ds ' \\k:\h'-(\\n(.wu*8/10-\*(#H)'\'\h"|\\n:u"
+.	ds ` \\k:\h'-(\\n(.wu*8/10-\*(#H)'\`\h'|\\n:u'
+.	ds ^ \\k:\h'-(\\n(.wu*10/11-\*(#H)'^\h'|\\n:u'
+.	ds , \\k:\h'-(\\n(.wu*8/10)',\h'|\\n:u'
+.	ds ~ \\k:\h'-(\\n(.wu-\*(#H-.1m)'~\h'|\\n:u'
+.	ds ? \s-2c\h'-\w'c'u*7/10'\u\h'\*(#H'\zi\d\s+2\h'\w'c'u*8/10'
+.	ds ! \s-2\(or\s+2\h'-\w'\(or'u'\v'-.8m'.\v'.8m'
+.	ds / \\k:\h'-(\\n(.wu*8/10-\*(#H)'\z\(sl\h'|\\n:u'
+.	ds q o\h'-\w'o'u*8/10'\s-4\v'.4m'\z\(*i\v'-.4m'\s+4\h'\w'o'u*8/10'
+.\}
+.	\" troff and (daisy-wheel) nroff accents
+.ds : \\k:\h'-(\\n(.wu*8/10-\*(#H+.1m+\*(#F)'\v'-\*(#V'\z.\h'.2m+\*(#F'.\h'|\\n:u'\v'\*(#V'
+.ds 8 \h'\*(#H'\(*b\h'-\*(#H'
+.ds v \\k:\h'-(\\n(.wu*9/10-\*(#H)'\v'-\*(#V'\*(#[\s-4v\s0\v'\*(#V'\h'|\\n:u'\*(#]
+.ds _ \\k:\h'-(\\n(.wu*9/10-\*(#H+(\*(#F*2/3))'\v'-.4m'\z\(hy\v'.4m'\h'|\\n:u'
+.ds . \\k:\h'-(\\n(.wu*8/10)'\v'\*(#V*4/10'\z.\v'-\*(#V*4/10'\h'|\\n:u'
+.ds 3 \*(#[\v'.2m'\s-2\&3\s0\v'-.2m'\*(#]
+.ds o \\k:\h'-(\\n(.wu+\w'\(de'u-\*(#H)/2u'\v'-.3n'\*(#[\z\(de\v'.3n'\h'|\\n:u'\*(#]
+.ds d- \h'\*(#H'\(pd\h'-\w'~'u'\v'-.25m'\f2\(hy\fP\v'.25m'\h'-\*(#H'
+.ds D- D\\k:\h'-\w'D'u'\v'-.11m'\z\(hy\v'.11m'\h'|\\n:u'
+.ds th \*(#[\v'.3m'\s+1I\s-1\v'-.3m'\h'-(\w'I'u*2/3)'\s-1o\s+1\*(#]
+.ds Th \*(#[\s+2I\s-2\h'-\w'I'u*3/5'\v'-.3m'o\v'.3m'\*(#]
+.ds ae a\h'-(\w'a'u*4/10)'e
+.ds Ae A\h'-(\w'A'u*4/10)'E
+.ds oe o\h'-(\w'o'u*4/10)'e
+.ds Oe O\h'-(\w'O'u*4/10)'E
+.	\" corrections for vroff
+.if v .ds ~ \\k:\h'-(\\n(.wu*9/10-\*(#H)'\s-2\u~\d\s+2\h'|\\n:u'
+.if v .ds ^ \\k:\h'-(\\n(.wu*10/11-\*(#H)'\v'-.4m'^\v'.4m'\h'|\\n:u'
+.	\" for low resolution devices (crt and lpr)
+.if \n(.H>23 .if \n(.V>19 \
+\{\
+.	ds : e
+.	ds 8 ss
+.	ds v \h'-1'\o'\(aa\(ga'
+.	ds _ \h'-1'^
+.	ds . \h'-1'.
+.	ds 3 3
+.	ds o a
+.	ds d- d\h'-1'\(ga
+.	ds D- D\h'-1'\(hy
+.	ds th \o'bp'
+.	ds Th \o'LP'
+.	ds ae ae
+.	ds Ae AE
+.	ds oe oe
+.	ds Oe OE
+.\}
+.rm #[ #] #H #V #F C
+.SH "NAME"
+mailem \- send email with test viruses
+.SH "SYNOPSIS"
+\fBmailem\fR [\fB--text 0|1|2 ...\fR] [\fB--count n\fR] [\fB--virus virus ...\fR] [\fB--novir virus ...\fR] [\fB--mime|--uu\fR] [\fB--rcpt user@host ... \fR] [\fB--bubble\fR] [\fB--host host\fR] [\fB--port port\fR]
+.PP
+\fBmailem\fR [\fB\-t n ...\fR] [\fB\-c n\fR] [\fB\-v s ...\fR] [\fB\-n s ...\fR] [\fB\-r s ...\fR] [\fB\-b\fR] [\fB\-p n\fR] [\fB\-ho host\fR]
+.SH "DESCRIPTION"
+\fImailem\fR sends one or more pieces of email as though coming from \fIOutlook Express\fR. Each piece of mail may contain one or more test viruses, and may be sent using either uuencoding or MIME. It is commonly used in a script where it may be repeated multiple times with different combinations of options. 
+.Sh "Format"
+To facilitate analysis, the \*(L"sender\*(R" of each message is a constructed string which tells what virus is in the first attachment, the total number of attachments, whether the message is \s-1MIME\s0, and whether or not a \fIBubbleBoy\fR is included.
+.PP
+For example:
+.PP
+.Vb 9
+\&        oe1M5BM.12345
+\&        0123456 7~
+\&        0-1 : Mailer (Outlook Express)
+\&        2   : "Text" level
+\&        3   : First "virus" attachment
+\&        4   : Total number of attachments
+\&        5   : B - BubbleBoy; x - no BubbleBoy
+\&        6   : M - MIME encoding; U - UUencoding
+\&        7-11: PID
+.Ve
+.Sh "Output"
+Each iteration of \fBmailem\fR produces two output files: a file containing a list of all of the \*(L"senders\*(R" and the types of attachments in that email, and another fail listing all of the senders whose emails were not successfully transmitted. (Five attempts are made at establishing an \s-1SMTP\s0 connection with the server before giving up.) The files are named, repectively, \*(L"senders99999\*(R" and \*(L"smtpfail99999\*(R" where \*(L"99999\*(R" represents the \s-1PID\s0. These files can be used as input to the \fBparse\fR script for analysis of mail handling.
+.SH "OPTIONS"
+.Ip "\fB--help|\-he|\-?\fR help" 4
+Prints out a brief help message.
+.Ip "\fB--text|\-t 0|1|2\fR text" 4
+Include optional random text (generated by \fIfortune\fR. With an argument of \fB0\fR, no text is included; with \fB2\fR, long text is included, and with \fB1\fR (the default) text of any length is included. If the option is repeated, mail is sent with both options: i.e., \fB\-t 0 \-t 2\fR would send an equal number of emails with no text and with long text.
+.Ip "\fB--count|\-c\fR number of attachments" 4
+The number of \fIadditional\fR attachments to include. 
+.Ip "\fB--virus|\-v virus_name\fR a virus to include" 4
+By default, one email will be sent with each of several different virus types (the single letter in parens following the name is the identifier used in the \*(L"sender\*(R" string):
+.Ip "\(bu \fBeicar (e)\fR \- eicar.com" 4
+.Ip "\(bu \fB\s-1WMT\s0 (M)\fR \- WMTestMacro.doc" 4
+.Ip "\(bu \fBclean (c)\fR \- clean.doc" 4
+an attachment much like WMTestMacro.doc but with no Macro. (It is \fBnot\fR a WMTestMacro.doc which has been cleaned.) If this attachment is specified, all other \fIcount\fR attachments will also be clean.
+.Ip "\(bu \fBeicar_zip (z)\fR \- eicar.zip" 4
+an eicar.com which has been compressed with Winzip.
+.Ip "\(bu \fBeicar_tgz (g)\fR \- eicar_tgz" 4
+an eicar.com which has been put into an archive with \s-1UNIX\s0 tar, then gzipped, and renamed without an extension.
+.Ip "\(bu \fBeicar_xyz (x)\fR \- eicar.xyz" 4
+an eicar.com which has been renamed to have an extension not normally scanned.
+.Ip "\(bu \fBnull (n)\fR \- no attachment at all. This overrides any \fIcount\fR argument which may be passed." 4
+.Ip "\(bu \fBno_name (o)\fR \- An eicar.com which has been renamed to a null filename. This one gets special handling as it is not included by default.  Use \fB--virus no_name\fR to send the \fBno_name\fR virus, but to \fBinclude\fR the \fBno_name\fR virus with the default list of viruses, use \fB--novir no_name\fR." 4
+.Ip "\fB--novir|\-nov virus_name\fR \- exclude the named virus from those sent. (Except that \fB--novir no_name\fR \fIincludes\fR the \fBno_name\fR virus.)" 4
+.Ip "\fB--mime|\-m\fR \- use \s-1MIME\s0 with base64 encoding for attachments. (default)" 4
+.Ip "\fB--uu|\-u\fR \- use UUencoding for attachments." 4
+.Ip "\fB--rcpt|\-r user@host\fR \- send to this recipient. Multiple \fBrcpt\fR options will send the complete set of emails to all recipients." 4
+.Ip "\fB--bubble|\-b\fR \- Include a (defanged) \fIBubbleBoy\fR virus. This option may be used only with \s-1MIME\s0 encoding." 4
+.Ip "\fB--host|\-h\fR \- \s-1SMTP\s0 host. Specify a host other than the \fIlibnet\fR default host to use for \s-1SMTP\s0 connections." 4
+.Ip "\fB--port|\-p\fR \- port. Specify a port other than 25 to use for \s-1SMTP\s0 connections." 4
+.SH "ERRORS"
+\fBmailem\fR tries five times to establish an SMTP connection with the server. If it fails after five attempts, an \*(L"smtpfail55555\*(R" file (where \*(L"55555\*(R" represents the PID) will be written in the current directory containing the \*(L"sender\*(R" of the mail which could not be sent.
+.SH "ENVIRONMENT"
+The modules (\fIoe.pm\fR and \fIvirii.pm\fR used by \fBmailem\fR must be placed in a directory where they can be read; probably the best place is a \fIlib\fR (or other name) directory in your home directory which you include in your \fBPERL5LIB\fR environment variable.
+.PP
+Besides its own modules \fBmailem\fR needs several other modules to run:
+.Ip "\fBNet::\s-1SMTP\s0\fR" 4
+.Ip "\fB\s-1HTML::\s0FromText\fR" 4
+.Ip "\fB\s-1MIME::\s0Base64\fR" 4
+.Ip "\fBConvert::\s-1UU\s0\fR" 4
+.Ip "\fBDigest::\s-1MD5\s0\fR" 4
+.PP
+All of these modules are available from \s-1CPAN\s0.
+.PP
+By default \fBmailem\fR connects to port 25 on the server specified as \fIsmtp_host\fR in \fIlibnet.cfg\fR. To override the server on a semi-permanent basis, you can create a \fI.libnetrc\fR file in your home directory containing an entry like
+.PP
+.Vb 3
+\&        {
+\&                smtp_hosts => ['10.11.0.9'],
+\&        }
+.Ve
+where 10.11.0.9 is the \s-1IP\s0 address of your \s-1SMTP\s0 host.
+.SH "FILES"
+\fIvirii.pm\fR
+\fIoe.pm\fR
+.SH "SEE ALSO"
+\fBparse\fR
+\fBsafe\fR
+\fBchecksafe\fR
+.SH "AUTHOR"
+Larry Prall <lprall@nai.com>
+
+.rn }` ''
+.IX Title "MAILEM 1"
+.IX Name "mailem - send email with test viruses"
+
+.IX Header "NAME"
+
+.IX Header "SYNOPSIS"
+
+.IX Header "DESCRIPTION"
+
+.IX Subsection "Format"
+
+.IX Subsection "Output"
+
+.IX Header "OPTIONS"
+
+.IX Item "\fB--help|\-he|\-?\fR help"
+
+.IX Item "\fB--text|\-t 0|1|2\fR text"
+
+.IX Item "\fB--count|\-c\fR number of attachments"
+
+.IX Item "\fB--virus|\-v virus_name\fR a virus to include"
+
+.IX Item "\(bu \fBeicar (e)\fR \- eicar.com"
+
+.IX Item "\(bu \fB\s-1WMT\s0 (M)\fR \- WMTestMacro.doc"
+
+.IX Item "\(bu \fBclean (c)\fR \- clean.doc"
+
+.IX Item "\(bu \fBeicar_zip (z)\fR \- eicar.zip"
+
+.IX Item "\(bu \fBeicar_tgz (g)\fR \- eicar_tgz"
+
+.IX Item "\(bu \fBeicar_xyz (x)\fR \- eicar.xyz"
+
+.IX Item "\(bu \fBnull (n)\fR \- no attachment at all. This overrides any \fIcount\fR argument which may be passed."
+
+.IX Item "\(bu \fBno_name (o)\fR \- An eicar.com which has been renamed to a null filename. This one gets special handling as it is not included by default.  Use \fB--virus no_name\fR to send the \fBno_name\fR virus, but to \fBinclude\fR the \fBno_name\fR virus with the default list of viruses, use \fB--novir no_name\fR."
+
+.IX Item "\fB--novir|\-nov virus_name\fR \- exclude the named virus from those sent. (Except that \fB--novir no_name\fR \fIincludes\fR the \fBno_name\fR virus.)"
+
+.IX Item "\fB--mime|\-m\fR \- use \s-1MIME\s0 with base64 encoding for attachments. (default)"
+
+.IX Item "\fB--uu|\-u\fR \- use UUencoding for attachments."
+
+.IX Item "\fB--rcpt|\-r user@host\fR \- send to this recipient. Multiple \fBrcpt\fR options will send the complete set of emails to all recipients."
+
+.IX Item "\fB--bubble|\-b\fR \- Include a (defanged) \fIBubbleBoy\fR virus. This option may be used only with \s-1MIME\s0 encoding."
+
+.IX Item "\fB--host|\-h\fR \- \s-1SMTP\s0 host. Specify a host other than the \fIlibnet\fR default host to use for \s-1SMTP\s0 connections."
+
+.IX Item "\fB--port|\-p\fR \- port. Specify a port other than 25 to use for \s-1SMTP\s0 connections."
+
+.IX Header "ERRORS"
+
+.IX Header "ENVIRONMENT"
+
+.IX Item "\fBNet::\s-1SMTP\s0\fR"
+
+.IX Item "\fB\s-1HTML::\s0FromText\fR"
+
+.IX Item "\fB\s-1MIME::\s0Base64\fR"
+
+.IX Item "\fBConvert::\s-1UU\s0\fR"
+
+.IX Item "\fBDigest::\s-1MD5\s0\fR"
+
+.IX Header "FILES"
+
+.IX Header "SEE ALSO"
+
+.IX Header "AUTHOR"
+

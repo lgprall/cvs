@@ -1,0 +1,31 @@
+Quick and dirty CPAN use
+
+Make sure you have a complete perl installation. Run the command:
+
+perl -MCPAN -e shell
+
+with no space between "-M" and "CPAN", and with a space between "-e" and
+"shell".
+
+You may be prompted (now or later) to update your CPAN installation by
+entering the command 'install bundle CPAN'; if so, go ahead and update.
+It will save time later, since that also installs libnet and MD5. You
+will have to answer several prompts concerning your installation and
+network during configuration.
+
+Once CPAN is updated, run the commands:
+
+install Net::SMTP
+install HTML::FromText
+install MIME::Base64
+install Convert::UU
+install Digest::MD5
+
+There will be a lot of activity during execution of these commands,
+including some possible error messages. As long as they end without
+anything appearing to be a failure message, you should be in good shape.
+
+
+
+
+

@@ -1,0 +1,117 @@
+The 'mailem' script generates virus laden email for testing.
+The 'parse' script analyses results.
+
+The options for 'mailem' (taken directly from the usage statement) are:
+
+mailem [--text 0|1|2 ...] [--count n] [--virus virus ...] [--novir virus ...]
+	[--mime|--uu] [--rcpt user\@host ... ] [--bubble]
+mailem [ -t n ... -c -v string ... -novir string ... -r string ... -b ]
+
+--text 0 generates no text, 1 generates a random fortune, and 2 generates a
+	random long fortune
+--count is the number of ADDITIONAL attachments to include in each message
+--virus 'virusname' attaches that virus
+--novir 'virusname' does NOT attach that virus
+--rcpt 'user@host' sends mail to that user
+--bubble includes BubbleBoy with each message
+Defaults to MIME encoding
+Default recipient is user1@chevelle
+(Valid 'viruses' are: 'eicar', 'WMT', 'clean', 'eicar_zip', 'eicar_tgz',
+	'eicar_xyz', and 'null')
+
+You can (and no doubt should) change the default recipient by editing
+the line about 34 lines down in 'mailem' which reads:
+	use constant DEFRCPT => "user1\@gto.rv.tis.com";
+
+Remember to escape the "@" sign with a "\", and remember to enclose the
+entire address in double quotes.
+
+You should also edit the default domain in the line below it:
+	use constant DOMAIN => "fasttrack.com";
+
+You can use multiple instances of most of the arguments. For example:
+
+'mailem -t 0 -t 1 -v eicar -v WMT'
+
+would send four emails: one each with an eicar or WMTestMacro without
+text, and the same with random text.
+
+'mailem -n clean -n null'
+
+would send four emails: one with every variety of virus (but none with a
+clean document, and none with no attachments, all with random text.
+
+'mailem -r user1@chevelle -r user2@sleepers'
+would send six emails each to two recipients.
+
+The 'mailem' script also generates (in the current directory) a file
+named 'sendersNNNNN' where 'NNNNN' is an arbitrary number (the PID).
+This file together with the '/var/log/messages' file from the SMTP host
+and the recipient mailbox from the POP server (e.g., '/var/mail/user1')
+are used by the 'parse' script to analyze the results of mail scanning.
+
+The 'parse' command has the options:
+
+Usage:
+parse [ --level 0|1|2 ] [ --repair|--norepair ] [ --verbose ] [--Verbose ]
+	message_file mail_file senders_file
+parse [ -l 0|1|2 ] [ -r ] [ -v ] [ -V ] msg_file mail_file senders_file
+
+Defaults to level 1 (Med); 0 is Low, 2 is High
+--Verbose/-V shows all errors, including minor ones
+--verbose/-v shows every attachment processed
+
+The 'parse' command writes an output file (cleverly named 'parse.out')
+in the current directory. It will contain a listing of every message
+and attachment processed, showing what was actually in the attachment
+when sent and what was in the attachment on receipt. It will also
+contain every error message generated.
+
+NOTE: It is *very* important to use the correct 'level' and 'repair'
+options when running parse; there is no way for the script to determine
+the scanning level used by Webshield, or to determine whether the
+'repair' option was set. Obviously if run with the incorrect options,
+'parse' will find many, many errors. If that happens, check the
+Webshield settings used for the scanning, and re-run 'parse' with the
+correct options.
+
+The easiest way to explain how to use these scripts is to give an
+example. I have three Unix hosts directly involved: 'chevelle.rv.tis.com'
+is an untrusted client, 'corvette' is the webshield server', and
+'bellett' is a trusted POP server. The first thing I do is make sure
+that the target mailbox on 'chevelle' is empty, so I log on to 'bellett'
+as root and remove /var/mail/user1. I then log on to 'corvette' and put
+a marker in /var/log/messages so I don't have to process any more of
+the file than I need to. Once that is set up, I log on to 'gto' as an
+ordinary user and run (e.g.) the commands:
+
+mailem -t 0 -t 1
+mailem -t 0 -t 1 -u
+mailem -t 0 -t 1 -c 5
+mailem -t 0 -t 1 -c 5 -u
+
+I can either run them from a command line, or put them in a script and
+run them. In either case, there will be four 'senders' files in the
+directory where I run 'mailem'. I cat all of these files into a single
+file ( cat senders* > senders), and wait for all of the mail to be
+delivered. (Usually I'll start a loop on 'corvette' which does:
+grep "^From " /var/mail/user1 | wc -l
+to count the messages in the mailbox. Once all of the messages I have
+sent (48 in this case; twelve for each run of 'mailem' -- six with text
+and six without) have shown up in the mailbox, I'll ftp the
+/var/mail/user1 file to my home directory on 'gto'. (I usually wait 3-5
+minutes after the last message in case any stragglers show up, which they
+sometimes do. )I'll then go to 'corvette' and copy the portion of the
+messages file that has been generated since I marked it into another file
+and ftp that file to 'gto' as well. Then I run the 'parse' command from
+'gto' with options something like:
+
+parse -l 2 -r ../messages ../mail.user1 senders
+
+If all mail appears to have been properly handled, the script will so
+indicate; if not, it will announce which emails have been mishandled and
+how. 
+
+[ Note: The 'parse' and 'checksafe' commands ignore each others' mail, so
+'mailem' and 'safe' can be run in the same iteration/script without a
+problem.]

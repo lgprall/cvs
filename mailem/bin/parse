@@ -1,0 +1,665 @@
+#!/usr/bin/perl -w
+###########################################################################
+# parse 1.0d - a script to scan input from /var/log/messages, a user's 
+#         mail file, and the 'senders(PID)' file produced by 'mailem' and
+#         analyze what should have been caught by the scanner, and what
+#	  was caught.
+###########################################################################
+#     Highly dependent on changes in the smapd scanner, since we often key 
+#     on strings inserted by the scanner. Also dependent on the 'mailem' 
+#     script, but we have control over that.
+###########################################################################
+
+use strict;
+
+use Getopt::Long;
+use vars qw( $Level $verbose $Verbose $Repair $Progress $Help );
+use MIME::Base64;
+use Convert::UU qw(uudecode);
+use Digest::MD5 qw(md5_hex);
+
+use virii;
+use oe;
+
+( my $Cmd = $0 ) =~ s@^.*/@@;
+my $Usage = <<USAGE ;
+
+Usage:
+$Cmd [ --level 0|1|2 ] [ --repair|--norepair ] [ --verbose ] [--Verbose ]
+	message_file mail_file senders_file
+$Cmd [ -l 0|1|2 ] [ -r ] [ -v ] [ -V ] msg_file mail_file senders_file
+
+Defaults to level 1 (Med); 0 is Low, 2 is High
+--Verbose/-V shows all errors, including minor ones
+--verbose/-v shows every attachment processed
+
+USAGE
+
+Getopt::Long::Configure( "no_ignore_case" );
+die $Usage unless GetOptions (
+	"level=i"	=> \$Level,
+	"help|?"	=> \$Help,
+	"verbose!"	=> \$verbose,
+	"Verbose!"	=> \$Verbose,
+	"repair!"	=> \$Repair,
+	"progress"	=> \$Progress,
+);
+die $Usage if $Help;
+
+$Level = 1 unless defined $Level;
+$Repair = 0 unless defined $Repair;
+# "0" is a valid Level; "-1" is not, so we have to increment here...
+my $tmp = index "012", $Level;
+die $Usage unless ++$tmp;
+
+$Progress = 0 if $Verbose or $verbose;
+
+# We have to have all of the input files, or we quit
+die $Usage unless @ARGV == 3;
+
+my ( $message_file, $mail_file, $senders_file ) = @ARGV;
+die "Can't open message_file ($message_file)\n" unless -r $message_file;
+die "Can't open mail_file ($mail_file)\n" unless -r $mail_file;
+die "Can't open senders_file ($senders_file)\n" unless -r $senders_file;
+
+my %sender;		# Keyed on the smap 'xma999999' number; values are 
+			# the local names of the senders
+
+my %ids;		# Keyed on the Message-IDs; values are the smapd PIDs
+
+my %smapid;		# Keyed on the smapd PID; values are the 'sma999999'
+			# numbers 
+
+my %sendmailpid;	# Keyed on the smapd PID; value is the sendmail
+			# PID reported by smapd on the handoff. Not currently
+			# used.
+
+my %message;		# Keyed on the Message-ID; value is the syslog
+			# message reported by smapd. Not currently used.
+			# At one time these were put in the output file,
+			# but they cluttered things up a bit, and didn't
+			# prove much since they apply only to the first
+			# virus found anyway. We could dump them all to
+			# a second output file if it would be useful.
+
+my %senders;		# Keyed on the local name of the sender; values are
+			# the attachments to the message
+
+my %count;		# Keyed on the local name of the sender; value is
+			# the number of times the sender was reported 
+			# processed by smap. Should be '1' for all of the
+			# 'constructed' senders.
+
+my %count2;		# Keyed on the smap ID; counts number of times this
+			# message delivered by smapd. Should always be '1'
+			# at the end of the run.
+			
+my $Error;		# Set if any message not handled properly
+my $Minor;		# Set if minor errors occurred
+
+use constant MAXVIRUS => 5;
+			# The maximum number of viruses which can be found in
+			# a single email and still allow repair. After 
+			# MAXVIRUS viruses are found, a WM/Test Macro will
+			# be discarded rather than repaired.
+
+# The senders file has a constructed user name, followed by a list of
+# attachments. Format of the entries is:
+# oe1M5BM.12345@domainname: attach1 attach2 attach3 ...
+# 0123456 7~
+# 0-1 : Mailer (Outlook Express)
+# 2   : "Text" level
+# 3   : First "virus" attachment
+# 4   : Total number of attachments
+# 5   : B - BubbleBoy; x - no BubbleBoy
+# 6   : M - MIME encoding; U - UUencoding
+# 7-11: PID
+open IN, "<$senders_file" or die "Can't open senders file; ";
+print "Reading $senders_file...\n";
+while (<IN>) {
+	my ($key, $val) = split /\@/, $_;
+	chop $val;
+	$senders{$key} = $val;
+}
+close IN;
+
+# %Key is defined in virii.pm; it associates the virus names with single
+# character abbreviations. %Name will get the name back.
+my %Name = reverse %Key;
+# We have to get rid of the "@domainname: ", then split up the attachments
+foreach ( keys %senders ) {
+	$senders{$_} =~ s/.*: //;
+	$senders{$_} = [ split / /, $senders{$_} ];
+	# Now we have to add the "top" attachment from the key
+	unshift @{$senders{$_}}, $Name{ substr $_, 3, 1 };
+	# If we have BubbleBoy, we need to make that the first in the list
+	unshift @{$senders{$_}}, "BubbleBoy" if substr($_, index($_, ".")-2, 1) eq 'B';
+}
+
+# Here it starts to get ugly, as we pull all kinds of information out of
+# the files, but we should find a use for most of this stuff someplace
+# (either now or in a later version...)
+
+open IN, "$message_file" or die "Couldn't open input file; ";
+print "Reading $message_file...\n";
+while (<IN>) {
+	if ( /smap\[.*from=<(.*?)@.*to=.*file=.*xma([\w\.]{6,9})$/ ) {
+		# skip messages that aren't in our senders list
+		next unless grep { /$1/ } keys %senders;
+		$sender{$2} = $1;
+		$count{$1}++;
+	}
+	if ( /smapd?\[(\d+)\]:.*Message-I[dD]: <(.*)>/ ) {
+		$ids{$2} = $1;
+	} elsif ( /smapd?\[(\d+)\]:.*delivered file=.*[xs]ma([\w\.]{6,9}) pid=(\d+).*$/ ) {
+		$smapid{$1} = $sender{$2};
+		$count2{$sender{$2}}++ if defined $sender{$2};
+#		$sendmailpid{$1} = $3; # Not now used, but may be useful later. 
+	} elsif ( /smapd\[(\d+)\]: (.*)/ ) {
+		$message{$1} .= "$2";
+	}
+}
+
+open IN, "<$mail_file" or die "Couldn't open mail file: ";
+print "Reading $mail_file...\n";
+my $messages;
+{ local $/; $messages = <IN> }
+my @messages = split /\n\n(?=From )/, $messages;
+
+# Now that we know what was sent, we figure out what was received
+#
+# We're going to write our output to a file in the current directory.
+# The filename will be the same for each run to avoid accumulation of
+# debris when the user never bothers to remove the old file.
+open OUT, ">parse.out" or die "Couldn't open output file.\n";
+print "Putting it all together (this could take a while)...\n";
+
+# Using unbuffered output to take care of progress marks (if used)
+$| = 1;
+
+my %sender_count;
+my @delivered;
+foreach ( @messages ) {
+	print "+" if $Progress;
+	my $sender = substr $_, 5, index( $_, "\@" ) - 5;
+	$sender_count{$sender}++;
+	# Skip it unless its something generated by 'mailem'
+	next unless defined $senders{$sender};
+	push @delivered, $sender;
+	/.*message-id: <(.*)>.*/i and $message{$1} = $_;
+	parse( $_ );
+}
+print "\n";
+
+print "All delivered mail handled without serious error.\n" unless $Error;
+my $also = $Error ? " also" : "";
+print "(Minor errors$also occurred in delivered mail.)\n" if $Minor;
+
+# This last couple of chunks should go largely unused. But it does allow
+# us to confirm that all messages were processed, and that they were
+# received only once.
+
+foreach my $s ( sort keys %senders ) {
+# The next two clauses do not work with the new streaming csmap. I have
+# just commented them out since they are somewhat redundant now (they
+# were originally put in to track a specific problem). If a need for
+# them arises, they will need to be rewritten and these lines may serve
+# as an idea of what needs to be done.
+#	unless ( grep { /$s/ } keys %count ) {
+#		print "Mail from $s was not processed.\n";
+#		print OUT "Mail from $s was not processed.\n";
+#		next;
+#	}
+
+#	unless ( grep { /$s/ } keys %count2 ) {
+#		print "Mail from $s was not delivered to sendmail.\n";
+#		print OUT "Mail from $s was not delivered to sendmail.\n";
+#		next;
+#	}
+	unless ( grep { /$s/ } @delivered ) {
+		print "Mail from $s was not received by the addressee.\n";
+		print OUT "Mail from $s was not received by the addressee.\n";
+	}
+}
+
+foreach ( sort keys %count ) {
+	if ( $count{$_} > 1 ) {
+		print "$_: processed $count{$_} times by smap.\n";
+		print OUT "$_: processed $count{$_} times by smap.\n";
+	}
+}
+my %SmapdCount;
+foreach ( keys %smapid ) {
+	# We're only accounting for 'mailem' generated emails here.
+	next unless defined $sender{$_};
+	$SmapdCount{$sender{$_}} = $count2{$_};
+}
+foreach ( sort keys %SmapdCount ) {
+	if ( $SmapdCount{$_} > 1 ) {
+		print "$_: delivered $SmapdCount{$_} times to sendmail.\n";
+		print OUT "$_: delivered $SmapdCount{$_} times to sendmail.\n";
+	}
+}
+foreach ( sort keys %sender_count ) {
+	if ( $sender_count{$_} > 1 ) {
+		print "$_: delivered $sender_count{$_} times to recipient.\n";
+		print OUT "$_: delivered $sender_count{$_} times to recipient.\n";
+	}
+}
+
+close OUT;
+exit;
+#
+# End of main script
+#
+
+sub parse($) {
+	my $message = shift;
+
+	# @attachments will hold a list of what we think we included
+	my $sender = substr $_, 5, index( $_, "\@" ) - 5;
+	my @attachments = @{$senders{$sender}};
+	# If there are no attachments, we're through
+	return unless @attachments;
+	return if $attachments[0] eq 'null';
+
+	# Count the total number of contaminated attachments
+	my $count = 0;
+	foreach ( @attachments ) {
+		$count++, next if /WMT/;
+		$count++, next if /eicar_tgz/ and $Level > 0;
+		$count++, next if /eicar_zip/ and $Level > 0;
+		$count++, next if /eicar_xyz/ and $Level > 1;
+		$count++, next if /BubbleBoy/;
+		$count++ if /eicar\b/;
+	}
+
+	if ( "U" eq substr $message, index($message, ".")-1, 1) {
+		uuparse( $sender, $message, $count, \@attachments );
+	} else {
+		mimeparse( $sender, $message, $count, \@attachments );
+	}
+}
+
+sub uuparse($$$\@) {
+	my ($sender, $message, $total, $attachref ) = @_;
+	my @attachments = @$attachref;
+	my $vc = $total == 1 ? 'virus' : 'viruses';
+	my $count = 0; # "countable" viruses to the point we find a Macro
+	print OUT "$sender: (uu;   $total countable $vc)\n";;
+	while ( $message =~ /(^begin \d{3}.*?^end$)/smg ) {
+		print "." if $Progress;
+		my $before = shift @attachments;
+		my ( $content, $file, $mode ) = uudecode $1;
+		die "Internal error: attachments out of sync.\n$sender: $file and $VirusFile{$before}\n" unless
+			$file =~ /$VirusFile{$before}/i or
+			$VirusFile{$before} eq "";
+		my ( $found, $repair, $munged );
+		$content =~ /Virus name: (.*)(\@MM)?\n$/mg and $found = $1;
+		# Since the scanner doesn't indicate that a virus was cleaned
+		# we'll check against MD5 digest for a cleaned copy
+		if ($file eq 'WMTestMacro.doc') { 
+			if (md5_hex($content) eq $Digest{WMT_clean}) {
+				$repair = 1;
+			}
+			elsif (md5_hex($content) ne $Digest{WMT}) {
+				$munged = 1;
+			}
+				
+		}
+		$count++ if $found or $repair;
+		# Last arg not used for uuencoding
+		analyze( $sender, $before, $found, $total, $repair, $count,
+			$munged, 0 );
+	}		
+}
+
+sub mimeparse($$$\@) {
+	my ($sender, $message, $total, $attachref ) = @_;
+	my @attachments = @$attachref;
+
+	my $Boundary = $oe_win{BOUNDARY};
+	
+	# We need to keep track of viruses detected so that we know
+	# whether a TestMacro is to be repaired or replaced. This actually
+	# sets up to count whether a virus _should_ have been detected,
+	# which may be more useful than counting actual detecteds.
+	my @countable = qw( eicar WMT BubbleBoy no_name );
+	push @countable, 'eicar_zip' if $Level > 0;
+	push @countable, 'eicar_tgz' if $Level > 0;
+	push @countable, 'eicar_xyz' if $Level > 1;
+	my $count = 0;
+
+	# We need to keep track of how many distinct kinds of virus have
+	# been detected in the current message: three kinds puts us in
+	# "review" mode, i.e. check all files
+	my ( @types );
+
+	# This first split is bogus, since it will include many things that
+	# aren't attachments, but it's a start.
+	my @sections = split /$Boundary/, $message;
+	if ( 1 == @sections ) { # could still have BubbleBoy
+		@sections = split /$oe_win{SUBBOUNDARY}/, $message;
+	}
+
+	# This cuts it down to the encoded attachments.
+	my @attach = grep { /content-transfer-encoding: [base64|7bit|8bit]/i } @sections;
+		
+	my $vc = $total == 1 ? 'virus' : 'viruses';
+	print OUT "$sender: (MIME; $total countable $vc)\n";;
+
+	# BubbleBoy needs a modicum of special handling: If a BubbleBoy was
+	# sent, but not detected, our expected attachments will be out of sync.
+	# If we're supposed to have a BubbleBoy, we'll process the first
+	# attachment as a special case, then proceed.
+	if ( $attachments[0] eq 'BubbleBoy' ) {
+		# Purge it from the list
+		shift @attachments;
+		# Increment the count now, since we won't enter the loop
+		$count++;
+		# See if we found it
+		my $found;
+		# If a BubbleBoy was found, the total number of attachments
+		# will have increased by one (BB isn't an attachment, but
+		# its replacement is). If the base attachment is 'null' we
+		# have a special case since there will be no true attachments
+		# going in.
+		$attach[0] =~ m[Virus name: (.*)(\@MM)?\n$]mg and $found = $1;
+		push @types, $found unless grep /$found/, @types;
+		if  ( $found =~ /BubbleBoy/ ) {
+			# If we found it, we need to shift it off the list
+			shift @attach;
+		} elsif ( @attach == @attachments + 1 or
+		     $attachments[0] eq 'null' ) { 
+			# An attachment has appeared where there was none
+			# (We already shifted the first one off)
+			# so we must have found a BB, just misidentified it.
+			shift @attach;
+		} else {
+			$found = undef;
+		}
+		analyze( $sender,
+			 'BubbleBoy',
+			 $found,
+			 $total,
+			 0,	# $repair
+			 $count,
+			 0	# $munged
+		);
+	}
+
+	foreach ( @attach ) {
+		print "." if $Progress;
+		my $before = shift @attachments;
+
+		my ($found, $repair);
+
+		# Splitting on two newlines may not work for mailers other
+		# than Outlook Express. It appears to be standard, but I
+		# can't find authority for it. It could also fail if there
+		# happened to be a malformed HTML attachment with two newlines
+		# internally . But for now this is all there is...
+		my ($hdr, $content) = split /\n\n/, $_;
+
+		# But this should...(unless a mailer fails to put quotes
+		# around the filename; if that happens this will need
+		# modification.)
+		(my $aname = $hdr) =~ s/.*filename="(.*)"(.*)/$1/ms;
+		die "Internal error: attachments out of sync.\n$sender: $aname and $VirusFile{$before}\n" unless
+			$aname =~ /$VirusFile{$before}/ or
+			$VirusFile{$before} eq "";
+
+		# If it's countable, we increment;
+		$count++ if grep { /\b$before\b/ } @countable;
+
+		$_ =~ /Virus name: (.*)(\@MM)?\n$/mg and $found = $1;
+		if ( $found ) {
+			push @types, $found unless grep /$found/, @types;
+		}
+		$_ =~ /x-nai-.*attachment repaired/i and $repair = 1;
+		if ( $repair ) {
+			push @types, 'WMT' unless grep /WMT/, @types;
+		}
+
+		my $munged = 0;
+		# "Trust but verify" - If it's really repaired, then we can
+		# match its digest against a known cleaned WMT.
+		if ( $before eq 'WMT' and $repair and
+		    md5_hex(decode_base64 $content) ne $Digest{WMT_clean} ) {
+			$repair = -1;
+			if ( md5_hex(decode_base64 $content) ne $Digest{WMT} ){
+				$munged++;
+			}
+		}
+
+		# On the other hand, if we've tried to repair something that
+		# isn't a WMT, then we'd better make sure that we haven't
+		# munged it...
+		if ( $repair and $before ne 'WMT' ) {
+			if ( md5_hex(decode_base64 $content) ne $Digest{$before}) {
+				$munged++;
+			} 
+		}
+
+		analyze( $sender, $before, $found, $total, $repair,
+		    $count, $munged, scalar @types );
+	}
+}
+
+sub analyze($$$$$$$) {
+	my ($sender, $before, $found, $total, $repair, $count, $munged, $types ) = @_;
+	$found = 'Nil' unless defined $found;
+	$found =~ s@</p>@@;
+	$found =~ s/\@MM$//;
+	$repair = 0 unless defined $repair;
+	my $unclean = 1, $repair = 0 if $repair < 0;
+	$count = 0 unless defined $count;
+	$munged = 0 unless defined $munged;
+	my $serious = 1;
+	my @msg = (
+		# 0
+		qq(ERROR - Attachment "${before}" removed in error;\n\t"${found}" reported.\n),
+
+		# 1
+		qq(ERROR - Attachment "${before}" erroneously reported repaired.\n),
+
+		# 2
+		qq(ERROR - Attachment "${before}" removed rather than repaired.
+		(Total of ${count} previously detected viruses in the message.)\n),
+
+		# 3
+		qq(ERROR - Attachment "${before}" passed through undetected.\n),
+
+		#4
+		qq(Still attached.\n),
+
+		#5
+		qq(ERROR - Attachment "${before}" removed at improper\n\tscanning level.\n),
+
+		#6
+		qq(Attachment intact.\n),
+
+		#7
+		qq(Attachment altered.\n),
+
+		#8
+		qq(ERROR - Attachment ${before} repaired rather than removed.\n),
+		
+		#9
+		qq(ERROR - Attachment ${before} misidentified as ${found},\n\tbut removed.\n),
+
+		#10
+		qq(Attachment not cleaned.\n),
+	);
+	
+	#
+	# UGLY -- UGLY -- UGLY
+	#
+	# Proceed past this point only if you have a strong stomach.
+	#
+	my $report;
+	if ( $before eq 'clean' ) {
+		if ( $found ne 'Nil' ) { $report = $msg[0]; }
+		elsif ( $repair ) {
+			$report = $msg[1];
+			$report .= $munged ? "\t$msg[7]" : "\t$msg[6]";
+			$serious = 0 if not $munged;
+		}
+		else { $report = undef; }
+	}
+	elsif ( $before eq 'BubbleBoy' ) {
+		if ( $found eq 'Nil' ) { $report = $msg[3]; }
+		elsif ( $found eq 'VBS/BubbleBoy' ) { $report = undef; }
+		else { $report = $msg[9]; $serious = 0; };
+	}
+	elsif ( $before eq 'eicar' or $before eq 'no_name' ) {
+		if ( $found eq 'EICAR test file' ) { $report = undef; }
+		elsif ( $found eq 'Nil' ) { $report = $msg[3]; }
+		else { $report = $msg[9]; $serious = 0; }
+	}
+	elsif ( $before eq 'eicar_zip' ) {
+		if ( $found eq 'EICAR test file' ) {
+			if ( $Level == 0 and $types < 3 ) { $report = $msg[5]; $serious = 0; }
+			else { $report = undef; }
+		}
+		elsif ( $found eq 'Nil' ) {
+			if ( $Level == 0 ) { $report = undef; }
+			else { $report = $msg[3]; }
+		}
+		else { $report = $msg[9]; $serious = 0; }
+	}
+	elsif ( $before eq 'eicar_tgz' ) {
+		if ( $found eq 'EICAR test file' ) {
+			if ( $Level > 0 or $types > 2 ) { $report = undef; }
+			else { $report = $msg[5]; $serious = 0; }
+		}
+		elsif ( $found eq 'Nil' ) {
+			if ( $Level > 0 ) { $report = $msg[3]; }
+			else { $report = undef; }
+		}
+		else { $report = $msg[9]; $serious = 0; }
+	}
+	elsif ( $before eq 'eicar_xyz' ) {
+		if ( $found eq 'EICAR test file' ) {
+			if ( $Level == 2 or $types == 3 ) { $report = undef; }
+			else { $report = $msg[5]; $serious = 0; }
+		}
+		elsif ( $found eq 'Nil' ) {
+			if ( $Level == 2 ) { $report = $msg[3]; }
+			else { $report = undef; }
+		}
+		else { $report = $msg[9]; $serious = 0; }
+	}
+	elsif ( $before eq 'WMT' ) {
+		if ( $Repair == 0 ) {
+			if ( $found eq "WM/Test Macro" ) {
+				$report = undef;
+			} elsif ( $found ne 'Nil' ) {
+				$report = $msg[9]; $serious = 0;
+			}
+			# $found eq 'Nil'
+			elsif ( $repair == 0 ) {$report = $msg[3];}
+			elsif ( $munged == 0 ) {$report = $msg[8];}
+			else { $report = "$msg[1]\t$msg[6]"; }		
+		} # else $Repair == 1 
+		elsif ( $found eq 'Nil' ) {
+			if ( $munged ) { $report = "$msg[1]\t$msg[7]\n"; }
+			elsif ( $unclean ) {$report = "$msg[1]\t$msg[10]";}
+			elsif ( $repair ) { $report = undef; }
+			else { $report = $msg[3];}
+		}
+		elsif ( $found eq 'WM/Test Macro' ) {
+			if ( $count >= MAXVIRUS ) { $report = undef; }
+			else { $report = $msg[2]; }
+		}
+		else { $report = $msg[9]; $serious = 0; }
+
+	}
+
+	my $repairstring = $repair == 1 ? '(repaired)' : 'Reported repaired, but not.';
+	
+	printf OUT "\tIn: %-9s  Out: %-15s %-30s\n", $before, $found, ($repair or $unclean)?$repairstring:'';
+	printf "In: %-9s  Out: %-15s %-30s\n", $before, $found, ($repair or $unclean)?$repairstring:'' if $verbose;
+	return unless $report;
+	my $PFX = $serious ? "** " : "#  ";
+	print OUT "$PFX$sender: $report\n";
+	print "$PFX$sender: $report" if ($Verbose or $verbose or $serious);
+	if ( $serious ) {
+		$Error++;
+	} else {
+		$Minor++;
+	}
+}
+
+__END__
+
+=head1 NAME
+
+B<parse> - Analyze the results of a B<mailem> run
+
+=head1 SYNOPSIS
+
+B<parse> [B<--level 0|1|2>] [B<--repair|--norepair>] [B<--verbose>] [B<--Verbose>] B<messages_file mail_file senders_file>
+
+B<parse> [B<-l 0|1|2>] [B<-r>] [B<-v>] [B<-V>] B<messages_file mail_file senders_file>
+
+=head1 DESCRIPTION
+
+B<parse> takes as input a F</var/log/messages> file (or extract), a user mailbox (e.g., F</var/spool/mail/user>), and a senders file consisting of one or more output files from B<mailem>, and analyses the results.
+
+=head2 Output
+
+All serious errors are written to STD_OUT during the run. A complete analysis of the mail received is written to a F<parse.out> file in the current directory. This file lists each individual message processed, the attachments originally included, and whether or not a virus was detected in the attachment. All errors noted are also written to the file.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help|-he|-?> help
+
+Prints out a brief help message.
+
+=item B<--level|-l> The scanning level used when the messages were sent. Low (scan executable and MS Office files) is level 0; medium (scan compressed files as well) is level 1; high (scan all files) is level 2. Level 1 is the default.
+
+=item B<--repair|-r> The "Repair" option was selected when the messages were sent.
+
+=item B<--verbose|-v> Write all output to STD_OUT.
+
+=item B<--Verbose|-V> Write all error output (even minor errors) to STD_OUT. 
+
+=head1 ENVIRONMENT
+
+The modules (I<oe.pm> and I<virii.pm> used by B<parse> must be placed in a directory where they can be read; probably the best place is a I<lib> (or other name) directory in your home directory which you include in your B<PERL5LIB> environment variable.
+
+Besides its own modules B<parse> needs several other modules to run:
+
+=over 4
+
+=item B<MIME::Base64>
+
+=item B<Convert::UU>
+
+=item B<Digest::MD5>
+
+=back
+
+All of these modules are available from CPAN.
+
+=head1 FILES
+
+F<virii.pm>
+F<oe.pm>
+
+=head1 SEE ALSO
+
+B<mailem>
+B<safe>
+B<checksafe>
+
+=head1 CAVEATS
+
+If you don't use the correct --level and --repair options when you run parse, you will see many "ERRORS". Just rerun the command with the correct options and all will be well.
+
+=head1 AUTHOR
+
+Larry Prall <lprall@nai.com>

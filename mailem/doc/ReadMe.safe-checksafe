@@ -1,0 +1,46 @@
+The 'safe' script generates email with a variety of attachments.
+The 'checksafe' script checks the incoming mail to determine whether all
+attachments made it through unmodified.
+
+The options for 'safe' (taken directly from the usage statement) are:
+
+safe [--text 0|1|2 ...] [--rcpt user@host ... ] [--mime|--uu] [--help ]
+safe [ -t n ... -r string ... [-m|-u] [-h|-?] ]
+
+--text 0 generates no text, 1 generates a random fortune, and 2 generates a
+	random long fortune
+--rcpt 'user@host' sends mail to that user
+Defaults to MIME
+Default recipient is user1@chevelle
+
+You can (and no doubt should) change the default recipient by editing
+the line about 34 lines down in 'mailem' which reads:
+	use constant DEFRCPT => "user1\@chevelle";
+Remember to escape the "@" sign with a "\", and remember to enclose the
+entire address in double quotes.
+
+You should also edit the default domain in the line below it:
+	use constant DOMAIN => "gto.rv.tis.com";
+
+You can include multiple recipients and multiple text options on the
+same command line; e.g.,
+
+safe -t 0 -t 2 --rcpt user1@chevelle --rcpt user2@sleepers
+
+The 'safe' command will send one message with each type of attachment,
+plus a single message with all attachments to each recipient. The
+current types of attachments are:
+'wav', 'bmp', 'avi', 'dib', 'mpeg', 'midi', 'jpeg', 'html', 'quicktime',
+and 'scr'. So there will be eleven emails (times the number of text
+options) sent for each invocation.
+
+The recipient's mailbox should be empty before running 'safe' As soon as
+all of the mail has been delivered, run the 'checksafe' command on the
+mail file ('/var/mail/user1' ). You can ftp the mail file to the
+system where you are running the test scripts, then run the command:
+
+checksafe ../mail.user1
+
+[ Note: The 'parse' and 'checksafe' commands ignore each others' mail, so
+'mailem' and 'safe' can be run in the same iteration/script without a
+problem.]

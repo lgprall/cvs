@@ -1,0 +1,464 @@
+#!/usr/bin/perl -w
+###########################################################################
+# mailem 1.0d - a script to produce infected email for testing purposes.
+###########################################################################
+# This version simulates mail from Microsoft Outlook Express 5.0 (Windows)
+# 
+# It optionally includes text (from 'fortune') and usually includes at least
+# one attachment. The attachments are: 'eicar.com', 'WMTestMacro.doc',
+# a "cleaned" WMTestMacro.doc called 'clean.doc', 'eicar.zip', and 'eicar.tgz'.
+# Encoding may be either MIME/base64 or uuencoding. If MIME encoding is used,
+# BubbleBoy may be included with all messages which contain attachments.
+#
+# Defaults are: 
+# 	a single attachment (plus one message with no attachment)
+#	random text
+#	to user1@chevelle(.rv.tis.com)
+#	MIME encoding
+#	no BubbleBoy
+
+use strict;
+
+use Net::SMTP;
+use HTML::FromText;
+use Getopt::Long;
+
+use oe;
+use virii;
+
+use vars qw( @Text @Rcpt $Count @Virii @Novir $Bubble $fortunes $Help
+	$Mime $Uu $Port $Host );
+
+#########################################################################
+# Change this to suit your environment
+
+use constant DEFRCPT => "user1\@gto.rv.tis.com";
+
+# This may have to be a domain or host known to your SMTP server if it's
+# picky.
+
+use constant DOMAIN => "fasttrack.com";
+
+#########################################################################
+
+(my $Cmd = $0 ) =~ s@^.*/@@;
+my $Usage = <<USAGE ;
+
+Usage:
+$Cmd [--text 0|1|2 ...] [--count n] [--virus virus ...] [--novir virus ...]
+	[--mime|--uu] [--rcpt user\@host ... ] [--bubble] [--host host]
+	[--port port]
+
+$Cmd [ -t n ...] [-c n] [-v s ...] [-n s ...] [-r s ...] -b [-p n]
+	[-ho host ]
+
+--text 0 generates no text, 1 generates a random fortune, and 2 generates a
+	random long fortune
+--count is the number of ADDITIONAL attachments to include in each message
+--virus 'virusname' attaches that virus
+--novir 'virusname' does NOT attach that virus (but see docs for 'no_name')
+--rcpt 'user\@host' sends mail to that user
+--bubble includes BubbleBoy with each message
+Defaults to MIME encoding
+Default recipient is @{[DEFRCPT]}
+(Valid 'viruses' are: 'eicar', 'WMT', 'clean', 'eicar_zip', 'eicar_tgz',
+	'eicar_xyz', and 'null'. See docs for the use of the special 'no_name'
+	virus type.
+
+USAGE
+
+die $Usage unless GetOptions (
+	"text=i"    => \@Text,
+	"rcpt=s"    => \@Rcpt,
+	"virus=s"   => \@Virii,
+	"novir=s"   => \@Novir,
+	"count:i"   => \$Count,
+	"fortune=s" => \$fortunes,
+	"bubble!"   => \$Bubble,
+	"help|?"    => \$Help,
+	"mime!"     => \$Mime,
+	"uu!"       => \$Uu,
+	"port=i"    => \$Port,
+	"host=s"    => \$Host,
+);
+die $Usage if $Help;
+
+foreach ( @Text ) {
+	die $Usage if $_ > 2 or $_ < 0;
+}
+# Special handling for the 'no_name' virus. We don't want it included by
+# default, so we resort to trickery.
+if ( not grep { /no_name/ } @Novir ) {
+	push @Novir, 'no_name' unless grep { /no_name/ } @Virii; 
+} else { 
+	@Novir = grep { !/no_name/ } @Novir;
+}
+my @AllVirii = ( keys %mime_virus );
+foreach my $v ( @Virii ) {
+	die $Usage unless grep { /$v/ } @AllVirii;
+}
+foreach my $v ( @Novir ) {
+	die $Usage unless grep { /$v/ } @AllVirii;
+}
+die "You must use MIME encoding to send BubbleBoy.\n" if $Uu and $Bubble;
+
+# Establish defaults
+@Text = ( 1 ) unless @Text;
+@Rcpt = ( DEFRCPT ) unless @Rcpt;
+$Count |= 1;
+$Mime = not $Uu if defined $Uu;
+$Mime = 1 unless defined $Mime;
+$fortunes |= "";
+
+# Obviously the "To:" line here is non-critical
+my $addressee = qq(To: "Whom It May Concern" <someone\@somewhere.org>);
+
+# Decide what 'viruses' we're going to use based on args
+@Virii = @AllVirii unless @Virii;
+if ( @Novir ) {
+	my %reject;
+	@reject{@Novir} = ();
+	my @tVirii;
+	foreach ( @Virii ) {
+		push @tVirii, $_ unless exists $reject{$_};
+	}
+	@Virii = @tVirii;
+}
+
+# This may be temporary, but for now it's used to generate a list of the
+# 'senders' so that we can parse the messages log and look only for these
+# entries
+open SENDERS, ">senders$$";
+open SMTPERR, ">smtpfail$$";
+
+
+# Wherein we enter a series of nested loops.  Probably not the best way
+# to do this in the long run, since things are going to get exponentially
+# more complicated. We may have to keep the loops, but the guts should
+# probably be moved to subroutines or otherwise handled more smartly.
+# There is almost certainly going to be some other reorg required.
+foreach my $Text ( @Text ) {
+	foreach my $content ( @Virii) {
+		# This "key" is for identification of the messages through
+		# the system. It lets us piece all of the information in
+		# /var/log/messages together, and also provides an easy (?)
+		# way to tell what's supposed to be in the message when
+		# it shows up on the client.
+		#	There are dependencies on this key in 'parse'.
+		#	If changes are made here, search for 'substr' there.
+		my $Encod = $Mime ? "M" : "U";
+		my $bKey = $Bubble ? "B" : "x";
+		$bKey = "x" if $content eq 'clean';
+		my $key = "oe" . $Text . $Key{$content} . $Count . $bKey . $Encod . ".";
+
+		# This will have to change once we incorporate different mailers
+		my ( $start_boundary, $end_boundary );
+		if ( $Mime ) {
+			$start_boundary = "--" . $oe_win{BOUNDARY};
+			$end_boundary = $start_boundary . "--";
+		} else {
+			$start_boundary = $end_boundary = "\n";
+		}
+
+		my $mime_header = $oe_win{MIME_HEADERS};
+		my $header = $oe_win{HEADERS};
+		my $preamble = $Mime ? $oe_win{PREAMBLE} : "";
+		
+		my $payload  = $Mime ? $mime_virus{$content} : $uu_virus{$content};
+		my $text = gen_text( $Text, $content );
+
+		# If more than one attachment is required, then
+		# we go into a loop to add any additional ones requested.
+		my $count = $Count;
+		my @attachments;
+		while ( --$count > 0 ) {
+			# No attachments means no attachments...
+ 			last if $content eq 'null';
+			# If we're marking this as 'clean', then all
+			# attachments should be clean; otherwise we'll
+			# have viruses detected in what should be a
+			# clean document
+			my $xcontent;
+			if ( $content eq 'clean' ) {
+				$xcontent = $content;
+			} else {
+				do {
+				$xcontent = $Virii[ int rand @Virii ];
+				} until $xcontent ne 'null';
+			}
+			push @attachments, $xcontent;
+			$payload .= "\n$start_boundary\n";
+			$payload .= $Mime ? $mime_virus{$xcontent} : $uu_virus{$xcontent};
+		}
+
+		my $body;
+		# Again this part may be Outlook Express dependent
+		if ( $content eq 'null' ) {
+			my $boundary = $oe_win{SUBBOUNDARY};
+			$mime_header =~ s/mixed/alternative/;
+			$text =~ s/content-type.*?${boundary}\n//smi;
+			$start_boundary = $end_boundary = "";
+		} 
+		
+		$body =  $Mime ? $mime_header : "";
+		$body .= "$header
+$preamble
+$text
+$start_boundary
+$payload
+$end_boundary
+";
+		if ( $content eq 'null' ) {
+			$body =~ s/$oe_win{BOUNDARY}/$oe_win{SUBBOUNDARY}/gsm;
+		}
+		
+		$body =~ s/\s*$//;
+
+ 		# This may (or may not) be changed later.
+ 		my $From = "$key$$\@@{[DOMAIN]}";
+
+		my $mail = qq(From: $From
+$addressee
+Subject: $content
+$body
+);
+ 
+ 		# Do the deed...
+		# Have had some problems on a busy SMTP server, so
+		# we'll try a few times before we give up.
+		my $tries;
+		my @waits;
+		my @pn = ( Port => $Port ) if defined $Port;
+		my $smtp = Net::SMTP->new( $Host, @pn );
+		until ( ref $smtp eq 'Net::SMTP' ) {
+			my $wait = 1 + int rand 10;
+			sleep $wait;
+			push @waits, $wait;
+#			sleep ++$tries;
+			$smtp = Net::SMTP->new( $Host, @pn );
+			last if ++$tries > 4;
+		}
+		unless ( ref $smtp eq 'Net::SMTP' ) {
+			my $seq = join ",", @waits;
+			print STDERR "$key$$: Failed to create SMTP object after waits of $seq seconds;
+	giving up.\n";
+			print SMTPERR "$key$$: Failed to create SMTP object after waits of $seq seconds;
+	giving up.\n";
+			next;
+		}
+ 		# Get our list of "senders"
+ 		print SENDERS "$From: @attachments\n";
+	
+ 		$smtp->mail( $From );
+ 		foreach my $Rcpt ( @Rcpt ) {
+ 			$smtp->to( $Rcpt );
+ 		}
+ 		$smtp->data();
+ 		$smtp->datasend( $mail );
+ 		$smtp->dataend();
+ 		$smtp->quit;
+
+	}
+}
+
+close SENDERS;
+close SMTPERR;
+print "Fin\n";
+
+sub gen_text($) {
+		# The following chunk is more to provide entertainment when
+		# checking the output on the clients than for anything useful.
+		#
+		# The 'text2html' function expects text in the form '_foo_'
+		# for underlining. The 'fortune' call unfortunately uses
+		# one of three forms for underlining:
+		# 1: '_^H_^H_^Hfoo'
+		# 2: '___^H^H^Hbar'
+		# 3: '_^Hb_^Ha_^Hz'
+		# This handles forms 1 and 2 fairly well; form 3 is 
+		# handled so that ugly non-printing characters don't make
+		# it into the recipient's mail, but it may not be underlined
+		# in the HTML output.
+		# There are some shortcomings in the HTML::FromText module
+		# which prevent proper handling of some bold and underlined
+		# forms.  I have patched my copy to handle the stuff put out
+		# by 'fortune', but it hasn't been certified for general use.
+		# If you want the changes, mailto://lprall@nai.com.
+		
+		my ($Text, $content) = @_;
+
+		my ($repl_text, $html_text);
+		my $html_line = $oe_win{HTML_LINE};
+		if ( $Text == 2 ) {
+			$repl_text = `/usr/games/fortune -l $fortunes` ;
+		} elsif ( $Text == 1 ) {
+			$repl_text = `/usr/games/fortune $fortunes` ;
+		} else {
+			$repl_text = "";
+			$html_line =~ s@<FONT.*?</FONT>@\&nbsp;@ if not $Text and not $Bubble;
+		}
+		if ( $repl_text =~ /((_)(\w))+/ ) {
+			$repl_text =~ s/(((_)(\w))+)/_$1_/;
+			$repl_text =~ s/(_)(\w)/$2/g;
+		}
+		$repl_text =~ s/((_)+()+)+(\w+)/_$4_/g;
+
+		$html_text = text2html( $repl_text, lines => 1, bold => 1, underline => 1 );
+		$html_text .= $BubbleBoy if $Bubble and $content ne 'clean';
+		$html_line =~ s/HTML_TEXT/$html_text/;
+		$html_line =~ s@<DIV>.*?</DIV>\n@@ if $Text == 0;
+		my $text;
+		if ( $Mime ) {
+			( $text = $oe_win{TEXT} ) =~ s@REPLACEMENT_TEXT@$repl_text@;
+			$text =~ s@REPLACEMENT_HTML@$html_line@;
+		} else {
+			$text = $repl_text;
+		}
+
+		return $text;
+}
+
+__END__
+
+=head1 NAME
+
+mailem - send email with test viruses
+
+=head1 SYNOPSIS
+
+B<mailem> [B<--text 0|1|2 ...>] [B<--count n>] [B<--virus virus ...>] [B<--novir virus ...>] [B<--mime|--uu>] [B<--rcpt user@host ... >] [B<--bubble>] [B<--host host>] [B<--port port>]
+
+B<mailem> [B<-t n ...>] [B<-c n>] [B<-v s ...>] [B<-n s ...>] [B<-r s ...>] [B<-b>] [B<-p n>] [B<-ho host>]
+
+=head1 DESCRIPTION
+
+I<mailem> sends one or more pieces of email as though coming from I<Outlook Express>. Each piece of mail may contain one or more test viruses, and may be sent using either uuencoding or MIME. It is commonly used in a script where it may be repeated multiple times with different combinations of options. 
+
+=head2 Format
+
+To facilitate analysis, the "sender" of each message is a constructed string which tells what virus is in the first attachment, the total number of attachments, whether the message is MIME, and whether or not a I<BubbleBoy> is included.
+
+For example:
+
+	oe1M5BM.12345
+	0123456 7~
+	0-1 : Mailer (Outlook Express)
+	2   : "Text" level
+	3   : First "virus" attachment
+	4   : Total number of attachments
+	5   : B - BubbleBoy; x - no BubbleBoy
+	6   : M - MIME encoding; U - UUencoding
+	7-11: PID
+
+=head2 Output
+
+Each iteration of B<mailem> produces two output files: a file containing a list of all of the "senders" and the types of attachments in that email, and another fail listing all of the senders whose emails were not successfully transmitted. (Five attempts are made at establishing an SMTP connection with the server before giving up.) The files are named, repectively, "senders99999" and "smtpfail99999" where "99999" represents the PID. These files can be used as input to the B<parse> script for analysis of mail handling.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help|-he|-?> help
+
+Prints out a brief help message.
+
+=item B<--text|-t 0|1|2> text
+
+Include optional random text (generated by I<fortune>. With an argument of B<0>, no text is included; with B<2>, long text is included, and with B<1> (the default) text of any length is included. If the option is repeated, mail is sent with both options: i.e., B<-t 0 -t 2> would send an equal number of emails with no text and with long text.
+
+=item B<--count|-c> number of attachments
+
+The number of I<additional> attachments to include. 
+
+=item B<--virus|-v virus_name> a virus to include
+
+By default, one email will be sent with each of several different virus types (the single letter in parens following the name is the identifier used in the "sender" string):
+
+=item * B<eicar (e)> - eicar.com
+
+=item * B<WMT (M)> - WMTestMacro.doc
+
+=item * B<clean (c)> - clean.doc
+
+an attachment much like WMTestMacro.doc but with no Macro. (It is B<not> a WMTestMacro.doc which has been cleaned.) If this attachment is specified, all other I<count> attachments will also be clean.
+
+=item * B<eicar_zip (z)> - eicar.zip
+
+an eicar.com which has been compressed with Winzip.
+
+=item * B<eicar_tgz (g)> - eicar_tgz
+
+an eicar.com which has been put into an archive with UNIX tar, then gzipped, and renamed without an extension.
+
+=item * B<eicar_xyz (x)> - eicar.xyz
+
+an eicar.com which has been renamed to have an extension not normally scanned.
+
+=item * B<null (n)> - no attachment at all. This overrides any I<count> argument which may be passed.
+
+=item * B<no_name (o)> - An eicar.com which has been renamed to a null filename. This one gets special handling as it is not included by default.  Use B<--virus no_name> to send the B<no_name> virus, but to B<include> the B<no_name> virus with the default list of viruses, use B<--novir no_name>.
+
+=item B<--novir|-nov virus_name> - exclude the named virus from those sent. (Except that B<--novir no_name> I<includes> the B<no_name> virus.)
+
+=item B<--mime|-m> - use MIME with base64 encoding for attachments. (default)
+
+=item B<--uu|-u> - use UUencoding for attachments.
+
+=item B<--rcpt|-r user@host> - send to this recipient. Multiple B<rcpt> options will send the complete set of emails to all recipients.
+
+=item B<--bubble|-b> - Include a (defanged) I<BubbleBoy> virus. This option may be used only with MIME encoding.
+
+=item B<--host|-h> - SMTP host. Specify a host other than the I<libnet> default host to use for SMTP connections.
+
+=item B<--port|-p> - port. Specify a port other than 25 to use for SMTP connections.
+
+=back
+
+=head1 ERRORS
+
+B<mailem> tries five times to establish an SMTP connection with the server. If it fails after five attempts, an "smtpfail55555" file (where "55555" represents the PID) will be written in the current directory containing the "sender" of the mail which could not be sent.
+
+=head1 ENVIRONMENT
+
+The modules (I<oe.pm> and I<virii.pm> used by B<mailem> must be placed in a directory where they can be read; probably the best place is a I<lib> (or other name) directory in your home directory which you include in your B<PERL5LIB> environment variable.
+
+Besides its own modules B<mailem> needs several other modules to run:
+
+=over 4
+
+=item B<Net::SMTP>
+
+=item B<HTML::FromText>
+
+=item B<MIME::Base64>
+
+=item B<Convert::UU>
+
+=item B<Digest::MD5>
+
+=back
+
+All of these modules are available from CPAN.
+
+By default B<mailem> connects to port 25 on the server specified as I<smtp_host> in F<libnet.cfg>. To override the server on a semi-permanent basis, you can create a F<.libnetrc> file in your home directory containing an entry like
+
+	{
+		smtp_hosts => ['10.11.0.9'],
+	}
+
+where 10.11.0.9 is the IP address of your SMTP host.
+
+=head1 FILES
+
+F<virii.pm>
+F<oe.pm>
+
+=head1 SEE ALSO
+
+B<parse>
+B<safe>
+B<checksafe>
+
+=head1 AUTHOR
+
+Larry Prall <lprall@nai.com>
