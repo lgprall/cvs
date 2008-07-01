@@ -1,0 +1,8 @@
+#!/bin/sh
+
+	export TERM=vt100
+	PID=$(/usr/bin/cat /var/sf/run/SFDataCorrelator.pid)
+	/usr/bin/echo "========================"
+	/usr/bin/date
+	/usr/bin/top -b -p $PID -n 1
+	/usr/bin/echo

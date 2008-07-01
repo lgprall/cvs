@@ -1,0 +1,2 @@
+15 */6 * * * /var/tmp/doit >> /var/tmp/remap_vulns.out 2>&1 
+
