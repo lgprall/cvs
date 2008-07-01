@@ -1,0 +1,4 @@
+#!/bin/sh
+
+PID=$(/usr/bin/cat /var/sf/run/SFDataCorrelator.pid)
+/usr/bin/top -p $PID 
