@@ -1,0 +1,13 @@
+#!/bin/sh
+
+HOSTS="csi sato glory entourage barret firman lightning2 ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+
+for host in $HOSTS
+do
+scp /Users/larry/Development/dcscripts/mon/ltoprc $host:.ltoprc
+scp /Users/larry/Development/dcscripts/mon/crontab $host:/var/tmp/crontab
+scp /Users/larry/Development/dcscripts/mon/SFDsz $host:/var/tmp/SFDsz
+ssh $host ln /usr/bin/top /usr/bin/ltop
+ssh $host crontab /var/tmp/crontab
+ssh $host rm /var/tmp/crontab
+done
