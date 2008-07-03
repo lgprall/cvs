@@ -4,10 +4,17 @@ HOSTS="csi sato glory entourage"
 
 for host in $HOSTS
 do
+
 scp /Users/larry/Development/dcscripts/mon/ltoprc $host:.ltoprc
 scp /Users/larry/Development/dcscripts/mon/crontab $host:/var/tmp/crontab
 scp /Users/larry/Development/dcscripts/mon/SFDsz $host:/var/tmp/SFDsz
-ssh $host ln /usr/bin/top /usr/bin/ltop
-ssh $host crontab /var/tmp/crontab
-ssh $host rm /var/tmp/crontab
-done
+ssh $host '
+if [ ! -e /usr/bin/ltop ]
+then
+ln /usr/bin/top /usr/bin/ltop
+fi
+crontab /var/tmp/crontab
+rm /var/tmp/crontab
+done 2>/dev/null
+
+ssh firman /usr/local/bin/ksettop 2>/dev/null
