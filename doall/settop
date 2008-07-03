@@ -15,6 +15,7 @@ ln /usr/bin/top /usr/bin/ltop
 fi
 crontab /var/tmp/crontab
 rm /var/tmp/crontab
+'
 done 2>/dev/null
 
 ssh firman /usr/local/bin/ksettop 2>/dev/null
