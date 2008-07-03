@@ -1,6 +1,6 @@
 #!/bin/sh
 
-HOSTS="csi sato glory entourage barret firman lightning2 ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS="csi sato glory entourage"
 
 for host in $HOSTS
 do
