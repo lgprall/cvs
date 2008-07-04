@@ -1,0 +1,15 @@
+#!/bin/sh
+
+(
+scp /usr/local/lib/settop/ltoprc kiesa:.ltoprc
+scp /usr/local/lib/settop/crontab kiesa:/var/tmp/crontab
+scp /usr/local/lib/settop/SFDsz kiesa:/var/tmp/SFDsz
+ssh kiesa '
+if [ ! -e /usr/bin/ltop ]
+then
+ln /usr/bin/top /usr/bin/ltop
+fi
+crontab /var/tmp/crontab
+rm /var/tmp/crontab
+'
+) 2>/dev/null
