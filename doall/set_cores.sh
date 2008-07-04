@@ -9,7 +9,7 @@ for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
 grep -q "core;" $FILE
-if [ $? ne 0 ]
+if [ $? -ne 0 ]
 then
 /bin/ed $FILE <<EOF
 1i
