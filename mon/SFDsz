@@ -3,5 +3,5 @@
 	export TERM=vt100
 	/usr/bin/echo "========================"
 	/usr/bin/date
-	/usr/bin/top -b -n 1
+	/usr/bin/ltop -b -n 1
 	/usr/bin/echo
