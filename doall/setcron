@@ -1,0 +1,18 @@
+#!/bin/sh
+
+#HOSTS="csi sato glory entourage barret firman lightning2 ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS="csi sato glory entourage";
+
+for host in $HOSTS
+do
+
+scp /Users/larry/Development/dcscripts/mon/crontab1 $host:/var/tmp/crontab
+ssh $host '
+PATH=/bin:/usr/bin:/usr/sbin
+crontab /var/tmp/crontab
+rm /var/tmp/crontab
+uname -n
+'
+done 2>/dev/null
+
+ssh firman /usr/local/bin/ksetmem 2>/dev/null
