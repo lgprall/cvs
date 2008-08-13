@@ -1,2 +1,2 @@
-15 */6 * * * /var/tmp/doit >> /var/tmp/remap_vulns.out 2>&1 
-
+* * * * * (date;/bin/cat /proc/meminfo; echo) >> /var/tmp/meminfo.out 2>&1 
+*/5 * * * * (date; PID=$(/usr/bin/cat /var/sf/run/SFDataCorrelator.pid); /bin/cat /proc/$PID/maps; echo) >> /var/tmp/SFDproc.out 2>&1
