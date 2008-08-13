@@ -14,4 +14,4 @@ cd /var/tmp/core; for file in $(ls -t); do ls -l --full-time $file; file $file; 
 fi
 echo
 '; done 2>/dev/null
-ssh firman /usr/local/bin/chk_kcores.sh
+ssh firman /usr/local/bin/chk_kcores.sh 2>/dev/null
