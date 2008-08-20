@@ -32,7 +32,7 @@ core;
 .
 /option --nodaemon/a
     option --debug;
-    logfile /var/log/SFD.log;
+    logfile /var/tmp/SFD.log;
 .
 wq
 EOF
