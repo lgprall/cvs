@@ -25,7 +25,7 @@ for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
 if [ -d /var/tmp/core ]
 then
-cd /var/tmp/core; for file in $(ls -t); do ls -l --full-time $file; file $file; done 
+cd /var/tmp/core; for file in $(ls -t); do ls -ld --full-time $file; file $file; done 
 fi
 echo
 '; done 2>/dev/null
