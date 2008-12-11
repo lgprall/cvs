@@ -17,7 +17,9 @@ HOSTS=$@
 
 if test -z "$HOSTS"
 then
-HOSTS="csi sato glory entourage barret firman lightning2 ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS="csi sato glory entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass";
+#HOSTS="csi sato glory entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+KIESA=1
 KIESA=1
 fi
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n

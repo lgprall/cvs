@@ -2,7 +2,8 @@
 
 CMD=$@
 
-HOSTS="csi sato glory entourage barret firman lightning2 ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS="csi sato glory entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass";
+#HOSTS="csi sato glory entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
 
 for host in $HOSTS; do echo "=====> $host"; ssh $host "
 . /etc/sf/ims.conf

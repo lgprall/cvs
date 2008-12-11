@@ -1,0 +1,13 @@
+#!/bin/sh
+
+HOSTS="csi sato glory entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+
+for host in $HOSTS
+do
+
+scp /Users/larry/.vimrc $host:.vimrc 2>/dev/null && echo Copied to $host
+
+done
+
+ssh firman scp .vimrc kiesa:.vimrc 2>/dev/null && echo Copied to Kiesa
+
