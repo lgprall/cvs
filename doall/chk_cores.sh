@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# $Id$
+# Check for core files on a list of hosts
+
 HOSTS=$@
 
 if test -z "$HOSTS"

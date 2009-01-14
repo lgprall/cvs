@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# $Id$
+# Turn on cores and SFDataCorrelator debugging on a list of hosts
+
 if test -z "$HOSTS"
 then
 HOSTS="csi sato glory kiesa entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
