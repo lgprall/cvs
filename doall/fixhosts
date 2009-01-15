@@ -1,8 +1,11 @@
 #!/bin/sh
 
+# $Id$
+# Quick way to repair the damage done when network settings are saved
+
 scp /Users/larry/Library/Hostfiles/hosts root@firman:/etc/hosts
 scp /Users/Larry/Library/Hostfiles/hosts root@sato:/etc/hosts
-ssh root@firman scp /etc/hosts kiesa:/etc/hosts
+scp /Users/Larry/Library/Hostfiles/hosts root@kiesa:/etc/hosts
 
 exit 0
 
