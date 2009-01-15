@@ -1,0 +1,8 @@
+#!/bin/sh
+
+scp /Users/larry/Library/Hostfiles/hosts root@firman:/etc/hosts
+scp /Users/Larry/Library/Hostfiles/hosts root@sato:/etc/hosts
+ssh root@firman scp /etc/hosts kiesa:/etc/hosts
+
+exit 0
+
