@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# $Id$
+# $Id: set_cores.sh,v 1.7 2009/01/14 21:54:41 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
+
+HOSTS=$@
 
 if test -z "$HOSTS"
 then
