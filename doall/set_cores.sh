@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.7 2009/01/14 21:54:41 larry Exp $
+# $Id: set_cores.sh,v 1.8 2009/01/29 14:22:58 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
 
 HOSTS=$@
@@ -8,7 +8,6 @@ HOSTS=$@
 if test -z "$HOSTS"
 then
 HOSTS="csi sato glory kiesa entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
-KIESA=1
 fi
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf

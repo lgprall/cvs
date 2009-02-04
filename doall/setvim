@@ -1,8 +1,13 @@
 #!/bin/sh
 
-# $Id$ turn off stupid VIM args
+# $Id: setvim,v 1.3 2009/01/14 21:50:53 larry Exp $ turn off stupid VIM args
 
-HOSTS="csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS=$@
+
+if test -z "$HOSTS"
+then
+HOSTS="csi sato glory kiesa entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+fi
 
 for host in $HOSTS
 do
