@@ -23,7 +23,7 @@ wq
 EOF
 fi
 
-grep -q 'logfile /var/tmp/SFD.log;' $FILE
+grep -q "logfile /var/tmp/SFD.log;" $FILE
 if [ $? -ne 0 ]
 then
 /bin/ed $FILE <<EOF1
