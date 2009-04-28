@@ -1,16 +1,34 @@
 #!/bin/bash
 
-# $Id$
+# $Id: chk_cores.sh,v 1.7 2009/01/14 21:54:36 larry Exp $
 # Check for core files on a list of hosts
+
+EXCLUDE=""
+
+while getopts 'x:' OPTION
+do
+    case $OPTION in
+    x)    EXCLUDE="$EXCLUDE $OPTARG"
+        ;;
+    h|?)  echo "Valid options are '-x exclude_host'"
+          exit 0
+        ;;
+    esac
+done
+shift $(($OPTIND - 1))
 
 HOSTS=$@
 
 if test -z "$HOSTS"
 then
 HOSTS="csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
-#HOSTS="csi sato glory entourage barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
-KIESA=1
 fi
+
+for NOT in $EXCLUDE
+do
+HOSTS=${HOSTS/ $NOT / }
+done
+
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
