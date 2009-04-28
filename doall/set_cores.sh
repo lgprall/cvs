@@ -1,14 +1,34 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.9 2009/02/04 21:47:54 larry Exp $
+# $Id: set_cores.sh,v 1.11 2009/04/17 14:49:55 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
+
+EXCLUDE=""
+
+while getopts 'x:' OPTION
+do
+    case $OPTION in
+    x)    EXCLUDE="$EXCLUDE $OPTARG"
+        ;;
+    h|?)  echo "Valid options are '-x exclude_host'"
+          exit 0
+        ;;
+    esac
+done
+shift $(($OPTIND - 1))
 
 HOSTS=$@
 
 if test -z "$HOSTS"
 then
-HOSTS="csi sato glory kiesa entourage deathstar firman lightning2 lorne ocean12 xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS=" csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn ";
 fi
+
+for NOT in $EXCLUDE
+do
+HOSTS=${HOSTS/ $NOT / }
+done
+
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf

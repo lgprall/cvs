@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.7 2009/01/14 21:54:36 larry Exp $
+# $Id: chk_cores.sh,v 1.8 2009/04/28 13:06:06 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -21,7 +21,7 @@ HOSTS=$@
 
 if test -z "$HOSTS"
 then
-HOSTS="csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn";
+HOSTS=" csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn ";
 fi
 
 for NOT in $EXCLUDE
