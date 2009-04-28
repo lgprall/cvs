@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.9 2009/04/28 13:18:59 larry Exp $
+# $Id: chk_cores.sh,v 1.10 2009/04/28 13:34:54 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -38,7 +38,9 @@ then
 	COUNT=$(ls core* | wc -l)
 	if [ 5 -lt $COUNT ]
 	then
-		echo "More than five cores"
+		echo "=============================================================================="
+		echo "++++++++++++++++++++++++++++++ Found ${COUNT// /} cores ++++++++++++++++++++++++++++++++"
+		echo "=============================================================================="
 	else
 		for file in $(ls -tr); do ls -ld --full-time $file; file $file; done 
 	fi
