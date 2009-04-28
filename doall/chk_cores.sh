@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.8 2009/04/28 13:06:06 larry Exp $
+# $Id: chk_cores.sh,v 1.9 2009/04/28 13:18:59 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -21,7 +21,7 @@ HOSTS=$@
 
 if test -z "$HOSTS"
 then
-HOSTS=" csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn ";
+HOSTS=" csi sato glory entourage kiesa firman lightning2 lorne ocean12 xander ocean11 fightclub klitschko cuttingclass beingjohn ";
 fi
 
 for NOT in $EXCLUDE
@@ -34,7 +34,14 @@ for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
 if [ -d /var/tmp/core ]
 then
-cd /var/tmp/core; for file in $(ls -tr); do ls -ld --full-time $file; file $file; done 
+	cd /var/tmp/core
+	COUNT=$(ls core* | wc -l)
+	if [ 5 -lt $COUNT ]
+	then
+		echo "More than five cores"
+	else
+		for file in $(ls -tr); do ls -ld --full-time $file; file $file; done 
+	fi
 fi
 echo
 '; done 2>/dev/null
