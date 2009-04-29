@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.11 2009/04/28 13:55:32 larry Exp $
+# $Id: chk_cores.sh,v 1.12 2009/04/29 12:38:45 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -31,7 +31,7 @@ do
 HOSTS=${HOSTS/ $NOT / }
 done
 
-if [ -n $SHOW ]
+if [ "$SHOW" ]
 then
     echo "Hosts: $HOSTS"
     exit 0
