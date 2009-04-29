@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.10 2009/04/28 13:34:54 larry Exp $
+# $Id: chk_cores.sh,v 1.11 2009/04/28 13:55:32 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
 
-while getopts 'x:' OPTION
+while getopts 'sx:' OPTION
 do
     case $OPTION in
     x)    EXCLUDE="$EXCLUDE $OPTARG"
+        ;;
+    s)    SHOW=1
         ;;
     h|?)  echo "Valid options are '-x exclude_host'"
           exit 0
@@ -28,6 +30,12 @@ for NOT in $EXCLUDE
 do
 HOSTS=${HOSTS/ $NOT / }
 done
+
+if [ -n $SHOW ]
+then
+    echo "Hosts: $HOSTS"
+    exit 0
+fi
 
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf
