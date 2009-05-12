@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.13 2009/04/29 12:42:20 larry Exp $
+# $Id: chk_cores.sh,v 1.14 2009/05/12 11:39:14 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -12,7 +12,7 @@ do
         ;;
     s)    SHOW=1
         ;;
-    h|?)  echo "Valid options are '-x exclude_host'"
+    h|?)  echo "Valid options are '-x exclude_host' and '-s' to show hosts"
           exit 0
         ;;
     esac

@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.12 2009/04/28 13:18:59 larry Exp $
+# $Id: set_cores.sh,v 1.13 2009/05/12 11:39:14 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
 
 EXCLUDE=""
 
-while getopts 'x:' OPTION
+while getopts 'shx:' OPTION
 do
     case $OPTION in
+    s)    SHOW=1
+        ;;
     x)    EXCLUDE="$EXCLUDE $OPTARG"
         ;;
     h|?)  echo "Valid options are '-x exclude_host'"
@@ -28,6 +30,12 @@ for NOT in $EXCLUDE
 do
 HOSTS=${HOSTS/ $NOT / }
 done
+
+if [ "$SHOW" -o -z "$COMMAND" ]
+then
+	echo "Hosts: $HOSTS"
+	exit 0
+fi
 
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf
