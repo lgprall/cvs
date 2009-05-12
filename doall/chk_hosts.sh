@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_hosts.sh,v 1.4 2009/01/14 21:54:39 larry Exp $
+# $Id: chk_hosts.sh,v 1.5 2009/05/12 11:27:15 larry Exp $
 # Run a (limited) command on a list of hosts
 
 EXCLUDE=""
@@ -31,10 +31,7 @@ HOSTS=$@
 
 if test -z "$HOSTS"
 then
-####  NOTE:  The leading and trailing spaces on this string are significant
-
-HOSTS=" csi sato glory entourage kiesa firman lightning2 lorne ocean12 xander ocean11 fightclub klitschko cuttingclass beingjohn ";
-
+. ~/lib/hostlist
 fi
 
 for NOT in $EXCLUDE

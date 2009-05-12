@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.11 2009/04/17 14:49:55 larry Exp $
+# $Id: set_cores.sh,v 1.12 2009/04/28 13:18:59 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
 
 EXCLUDE=""
@@ -21,7 +21,7 @@ HOSTS=$@
 
 if test -z "$HOSTS"
 then
-HOSTS=" csi sato glory entourage kiesa barret firman lightning2 lorne ocean12 eko xander ocean11 fightclub klitschko cuttingclass beingjohn ";
+. ~/lib/hostlist
 fi
 
 for NOT in $EXCLUDE
