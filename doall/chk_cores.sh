@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.14 2009/05/12 11:39:14 larry Exp $
+# $Id: chk_cores.sh,v 1.15 2009/05/12 11:47:40 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -40,9 +40,9 @@ fi
 for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
-if [ -d /var/tmp/core ]
+if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
 then
-	cd /var/tmp/core
+	cd $SF_DATA_ROOT_PATH/var/tmp/core
 	COUNT=$(ls core* | wc -l)
 	if [ 5 -lt $COUNT ]
 	then
