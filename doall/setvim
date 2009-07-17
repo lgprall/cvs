@@ -1,12 +1,43 @@
 #!/bin/sh
 
-# $Id: setvim,v 1.4 2009/02/04 21:47:51 larry Exp $ turn off stupid VIM args
+# $Id: setvim,v 1.5 2009/05/12 11:39:14 larry Exp $ turn off stupid VIM args
+
+EXCLUDE=""
+
+while getopts 'sx:e:' OPTION
+do
+	case $OPTION in
+	s) 	SHOW=1
+		;;
+	x)	EXCLUDE="$EXCLUDE $OPTARG"
+		;;
+	h|?)	echo "Valid options are:"
+		echo "	-x exclude_host"
+		echo "		Exclude this host; can be used multiple times."
+		echo "	-s "
+		echo "		Show list of hosts to be sent the command."
+		exit 0
+		;;
+	esac
+done
+shift $(($OPTIND - 1))
 
 HOSTS=$@
 
 if test -z "$HOSTS"
 then
 . ~/lib/hostlist
+fi
+
+for NOT in $EXCLUDE
+do
+HOSTS=${HOSTS/ $NOT / }
+done
+
+if [ "$SHOW" -o -z "$COMMAND" ]
+then
+	echo "Hosts: $HOSTS"
+	exit 0
 fi
 
 for host in $HOSTS
