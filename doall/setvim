@@ -34,7 +34,7 @@ do
 HOSTS=${HOSTS/ $NOT / }
 done
 
-if [ "$SHOW" -o -z "$COMMAND" ]
+if [ -n "$SHOW" ]
 then
 	echo "Hosts: $HOSTS"
 	exit 0
