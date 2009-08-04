@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# $Id:
+
+EXCLUDE=""
+
+while getopts 'sx:h' OPTION
+do
+	case $OPTION in
+	s) 	SHOW=1
+		;;
+	x)	EXCLUDE="$EXCLUDE $OPTARG"
+		;;
+	h|?)	echo "Valid options are:"
+		echo "	-x exclude_host"
+		echo "		Exclude this host; can be used multiple times."
+		echo "	-s "
+		echo "		Show list of hosts to be sent the command."
+		exit 0
+		;;
+	esac
+done
+shift $(($OPTIND - 1))
+
+HOSTS=$@
+
+if test -z "$HOSTS"
+then
+. ~/lib/dclist
+fi
+
+for NOT in $EXCLUDE
+do
+HOSTS=${HOSTS/ $NOT / }
+done
+
+if [ -n "$SHOW" ]
+then
+	echo "Hosts: $HOSTS"
+	exit 0
+fi
+
+for host in $HOSTS
+do
+ssh $host mysql -padmin sfsnort -e \'delete from rna_protocol where layer = \"net\"  and proto not in \(select protocol from rna_network_protocol_str\)\'
+done
+
