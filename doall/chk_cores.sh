@@ -53,5 +53,23 @@ then
 		for file in $(ls -tr); do ls -ld --full-time $file; file $file; done 
 	fi
 fi
+
+ls $SF_DATA_ROOT_PATH/var/sf/detection_engines/*/instance*/var/tmp/core > /dev/null 2>&1
+
+if [ 0 -eq $? ] 
+then
+	cd $SF_DATA_ROOT_PATH/var/sf/detection_engines
+	for dir in $(ls -d */instance*/var/tmp/core)
+	do
+		cd $dir
+                if [ ! -f core* ]; then continue; fi
+		COUNT=$(ls core* | wc -l)
+		if [ 0 -lt $COUNT ]
+		then
+			echo "   ====> in $dir"
+			for file in $(ls -tr); do ls -ld --full-time $file; file $file; done
+		fi
+	done
+fi
 echo
 '; done 2>/dev/null
