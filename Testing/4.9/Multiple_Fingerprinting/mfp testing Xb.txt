@@ -1,0 +1,63 @@
+Set up DC with RNA sensor/DE
+
+Set up a system policy with Multiple Fingerprinting set to generate id conflict events.  Make sure that Nmap and Nessus are number 1 and number 2 respectively in the list (they may be the only ones in the list). Set the Nmap timeout for 1 hour.  Apply the policy.
+
+Set up and apply an RNA detection policy (wide open).
+
+Set up nmap scan remediation
+
+Set up and activate compliance rule/policy for OS conflict
+	a host input event occurs + the OS or service identity for a host has a conflict
+	5 minute snooze (for now)
+
+Create a White List which includes the 10.4.12 network and does not allow OS 9.  Add that White List to the policy which you activated.
+
+Shut down dpress.  Boot up in OS X; don't touch.
+
+---
+
+Connect to dpress from Firefox on Firman.
+
+Should see RNA ident as OS "10.3, 10.4, (etc)" (derived) in the host profile.  There should be one http service. There should be no "View" icon for the OS. Note the number of RNA vulnerabilities (598).
+
+----
+
+Run manual NMAP scan of dpress(can be done from Host Profile page); note the time it completes.
+
+Host profile should show the Operating System as Mac OS X 10.3.x.  Click the View icon, and the window should show both the NMAP ident and two RNA idents: one for OS X 10.(pretty much anything), and the other for FreeBSD (or some other BSD). This is because the traffic triggered by the NMAP scan was fingerprinted by RNA to both OSes.  There should be additional services; at least the http service will have both an RNA and Nmap ident when viewed.
+
+
+Now go to 10.4.12.75 and make a Safari connection to Sato.
+
+The backend should now show the client fingerprint as well:
+
+There should be no alert and no conflict event, because there is no changed information even though a new fingerprint has been added. There should also be no change in the rna_service_info map.  Note that RNA may mis-identify the OS or the service following a scan, but that isn't at issue here.
+
+
+The backend should now show an application fingerprint (fp_type 7):
+
+
+Now edit the Multiple Fingerprint section of the System Policy and move the "FineGrain" application above Nmap and set the timeout period to one hour.  Apply the policy.
+
+
+
+Note the time and wait one hour from the time of the original Nmap scan.  The application fingerprint should be gone and the number of vulnerabilities should have gone back to the original number.
+
+
+
+Check the number of RNA Vulnerabilities (598).
+
+Now reboot the box in to OS 9.
+Connect again from Firman.
+
+A conflict event should be generated and an NMAP scan started.  A White List violation for the operating system should be generated.  The host profile should now show HPUX 11.x for the scan fingerprint (that's an NMAP bug, corrected in later versions which we probably won't see in the build any time soon).  When viewing the OS identity, the RNA identity should still be OS X, but with a lower confidence.
+
+Connect to Sato with IE. The backend should show a new client fingerprint:
+
+
+The GUI will still show the old RNA ident, but perhaps with a lower confidence.  Note the number of RNA vuls; this is for the HP-UX ident, of course.
+
+Delete the Nmap (HPUX) ident from the GUI.
+ 
+
+The host profile should reflect the updated derived fingerprint as the RNA fingerprint when viewing the OS
