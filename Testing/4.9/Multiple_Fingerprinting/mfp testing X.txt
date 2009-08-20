@@ -1,3 +1,5 @@
+# $Id$
+
 Set up DC with RNA sensor/DE
 
 Set up a system policy with Multiple Fingerprinting set to generate id conflict events.  Make sure that Nmap and Nessus are number 1 and number 2 respectively in the list (they may be the only ones in the list). Set the Nmap timeout for 1 hour.  Apply the policy.
