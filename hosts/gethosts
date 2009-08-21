@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 # get_hosts
-# $Id: gethosts,v 1.5 2006/10/30 15:47:10 larry Exp $  $Name:  $
+# $Id: gethosts,v 1.6 2007/01/25 21:44:00 larry Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 
 use strict;
@@ -327,6 +327,10 @@ sub getem {
 	my $host;
 	my $me = $ID;
 	my @USER_AGENTS = ("Mozilla/5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit/416.11 (KHTML, like Gecko) Safari/416.12",
+		"Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.1.2) Gecko/20090729 Firefox/3.5.2",
+		"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_8; en-us) AppleWebKit/531.9 (KHTML, like Gecko) Version/4.0.3 Safari/531.9",
+		"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10.5; en-US; rv:1.9.1.2) Gecko/20090729 Firefox/3.5.2",
+		"Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.1) Gecko/20090624 Firefox/3.5",
 		"Mozilla/5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit/418.9 (KHTML, like Gecko) Safari/419.3",
 		"Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.8.1) Gecko/20061010 Firefox/2.0",
 		"Mozilla/5.0 (compatible; Konqueror/3.4; Linux) KHTML/3.4.0 (like Gecko)",
