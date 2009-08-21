@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.17 2009/08/20 10:38:18 larry Exp $
+# $Id: chk_cores.sh,v 1.18 2009/08/20 11:14:55 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -51,7 +51,7 @@ then
 		echo "=============================================================================="
 		echo
 	else
-		for file in $(ls -tr); do ls -ld --full-time $file; file $file; done 
+		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
 		echo
 	fi
 fi
