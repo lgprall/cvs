@@ -1,20 +1,23 @@
-# $Id: mfp\040testing\0409.txt,v 1.2 2009/08/20 12:03:05 larry Exp $
+# $Id: mfp_testing9.txt,v 1.1 2009/08/20 12:05:39 larry Exp $
 
 Set up DC with RNA sensor/DE
 
-Set up and apply system policy with mfp set to generate id conflict events and the Nmap source set for a 1 hour timeout.
+Set up a system policy with Multiple Fingerprinting set to generate id conflict events.  Make sure that Nmap and Nessus are number 1 and number 2 respectively in the list (they may be the only ones in the list). Set the Nmap timeout for 1 hour.  Apply the policy.
 
-Set up RNA detection policy (wide open).
+Set up and apply RNA detection policy (wide open).
 
 Set up nmap scan remediation
 
 Set up and activate compliance rule/policy for OS conflict
 	a host input event occurs + the OS or service identity for a host has a conflict
 	5 minute snooze (for now)
+			
+Create a White List which includes the 10.4.12 network and does not allow OS 9.  Add that White List to the policy which you activated.
 
-Shut down dpress.  Boot up in OS 9; don't touch.
+Shut down dpress.  Boot up in OS 9; make sure that MacHTTP is not running and turn on Apple Personal Websharing; don't touch.
+(This is because of bug 52578; need to change this to use MacHTTP after that is fixed.)
 
-mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
+mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
 
 (returns nothing)
 
@@ -22,159 +25,236 @@ Connect to dpress from Firman browser.
 
 Should see RNA ident as OS 9.x (derived) in the host profile. 
 
-root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, fp_source_type, fp_source_id, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
-+---------+---------+----------------+--------------+-------------+------------+------------+------------+---------------------+
-| current | fp_type | fp_source_type | fp_source_id | os_vendor   | os_product | os_version | confidence | time                |
-+---------+---------+----------------+--------------+-------------+------------+------------+------------+---------------------+
-|       0 |       1 |              0 |            0 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-08-05 13:45:36 |
-|       1 |       0 |              0 |            3 | Apple       | Mac OS     | 9.x        |         98 | 2009-08-05 13:45:36 |
-+---------+---------+----------------+--------------+-------------+------------+------------+------------+---------------------+
-+------------+------+----------+-------------+-----------+---------+------------+---------+---------+---------------------+
-| IP         | port | protocol | source_type | source_id | current | service_id | vendor  | version | Last                |
-+------------+------+----------+-------------+-----------+---------+------------+---------+---------+---------------------+
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       1 |          9 | MacHTTP | 2.6     | 2009-08-05 13:45:37 |
-+------------+------+----------+-------------+-----------+---------+------------+---------+---------+---------------------+
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+-------------+------------+------------+------------+---------------------+
+| current | fp_type | os_vendor   | os_product | os_version | confidence | time                |
++---------+---------+-------------+------------+------------+------------+---------------------+
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:50:46 |
+|       1 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-09-02 11:50:46 |
++---------+---------+-------------+------------+------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+-------------------+---------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor            | version | Last                |
++------+----------+-------------+-----------+---------+------------+-------------------+---------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder | 1.0     | 2009-09-02 11:50:46 |
+|   80 | tcp      |           0 |         0 |       1 |          9 | Web Sharing       |         | 2009-09-02 11:50:46 |
++------+----------+-------------+-----------+---------+------------+-------------------+---------+---------------------+
 
 Run manual NMAP scan of dpress.
 
-Host profile should show the Operating System as HP-UX (that's an NMAP problem; Bug 51722 opened).  Click the View icaon, and the window should show both the RNA Mac OS 9.x ident and the NMAP ident.
+Host profile should show the Operating System as HP-UX (that's an NMAP problem; Bug 51722 opened).  Click the View icaon, and the window should show both the RNA Mac OS 9.x ident and the NMAP ident. There should also be an afpovertcp service tickled by NMAP.
 
-root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
 +---------+---------+-------------+------------+------------+------------+---------------------+
 | current | fp_type | os_vendor   | os_product | os_version | confidence | time                |
 +---------+---------+-------------+------------+------------+------------+---------------------+
-|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-08-04 15:32:28 |
-|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-08-04 15:32:28 |
-|       1 |       6 | HP          | HP-UX      | 11.X       |        100 | 2009-08-04 15:32:28 |
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:50:46 |
+|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-09-02 11:55:23 |
+|       1 |       6 | HP          | HP-UX      | 11.X       |        100 | 2009-09-02 11:55:23 |
 +---------+---------+-------------+------------+------------+------------+---------------------+
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
-| IP         | port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | MACOS_Personal_Websharing       |         | 2009-08-04 15:26:23 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-08-04 15:32:29 |
-| 10.4.12.75 |  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-08-04 15:32:29 |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 11:55:23 |
+|  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-09-02 11:55:23 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
 
-Now go to 10.4.12.75 and make an IE connection to Sato.
+	Now go to 10.4.12.75 and make an IE connection to Sato.
 
 The backend should now show the client fingerprint as well:
 
-root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
 +---------+---------+-------------+------------+------------+------------+---------------------+
 | current | fp_type | os_vendor   | os_product | os_version | confidence | time                |
 +---------+---------+-------------+------------+------------+------------+---------------------+
-|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-08-04 15:32:28 |
-|       1 |       6 | HP          | HP-UX      | 11.X       |        100 | 2009-08-04 15:32:28 |
-|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-08-04 17:05:56 |
-|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-08-04 17:05:56 |
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:50:46 |
+|       1 |       6 | HP          | HP-UX      | 11.X       |        100 | 2009-09-02 11:55:23 |
+|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-09-02 11:58:25 |
+|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:58:25 |
 +---------+---------+-------------+------------+------------+------------+---------------------+
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
-| IP         | port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | MACOS_Personal_Websharing       |         | 2009-08-04 15:26:23 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-08-04 15:32:29 |
-| 10.4.12.75 |  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-08-04 15:32:29 |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
-root@glory:~# 
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 11:55:23 |
+|  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-09-02 11:55:23 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
 
-There should be no alert, no change in the GUI, and no conflict event, because there is no changed information even though a new fingerprint has been added. There should also be no change in the rna_service_info map.
+There should be no alert, no change in the GUI (other than the confidence level), and no conflict event, because there is no changed information even though a new fingerprint has been added. There should also be no change in the rna_service_info map.
+
+Now we'll manually set the OS to the correct identification.  In the GUI, click the "Edit" icon for Operating System.  Leave the OS Definition as "User-Defined". Remove the check from the "Use Custom Display String" box. Under User-Defined OS Identity use the pulldowns to select "Apple, Inc.", "Mac OS", "9", and "2".  Don't select a revision. Click Finish.
+
+Edit the Apple Personal Websharing httpd service.  Leave everything as is, and click Finish.
+
+Now the backend will show the user assigned identity (fp_type 5) as the current OS identity, and the user assigned service identity (source_id 5):
+
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+-------------+------------+------------+------------+---------------------+
+| current | fp_type | os_vendor   | os_product | os_version | confidence | time                |
++---------+---------+-------------+------------+------------+------------+---------------------+
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:50:46 |
+|       0 |       6 | HP          | HP-UX      | 11.X       |        100 | 2009-09-02 11:55:23 |
+|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-09-02 11:58:25 |
+|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:58:25 |
+|       1 |       5 | Apple, Inc. | Mac OS     | 9.2        |        100 | 2009-09-02 12:00:23 |
++---------+---------+-------------+------------+------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 11:55:23 |
+|  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-09-02 11:55:23 |
+|   80 | tcp      |           1 |         5 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 12:00:42 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+
+And the View window for the OS in the GUI will show all three identities, with the user identity as the primary. The View window for the http service will show all of the idents with the user identity as the primary.
+
+Copy the setos9.pl script (attached) to the DC (/var/tmp is good) and run it.
+
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+-------------+------------+------------+------------+---------------------+
+| current | fp_type | os_vendor   | os_product | os_version | confidence | time                |
++---------+---------+-------------+------------+------------+------------+---------------------+
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:50:46 |
+|       0 |       6 | HP          | HP-UX      | 11.X       |        100 | 2009-09-02 11:55:23 |
+|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-09-02 11:58:25 |
+|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:58:25 |
+|       1 |       5 | Apple, Inc. | Mac OS     | 9.2        |        100 | 2009-09-02 12:00:23 |
+|       0 |       7 | Apple       | Mac OS     | 9.2.2      |        100 | 2009-09-02 12:03:46 |
++---------+---------+-------------+------------+------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 11:55:23 |
+|  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-09-02 11:55:23 |
+|   80 | tcp      |           1 |         5 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 12:00:42 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+
+Now the backend shows the user-input API identity (fp_type 7), but the type 5 identity is still the current one.  The GUI shows all idents.  From the GUI, delete the bogus HP-UX identification.
+
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+-------------+------------+------------+------------+---------------------+
+| current | fp_type | os_vendor   | os_product | os_version | confidence | time                |
++---------+---------+-------------+------------+------------+------------+---------------------+
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:50:46 |
+|       0 |       0 | Apple       | Mac OS     | 9.x        |         98 | 2009-09-02 11:58:25 |
+|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2    |          0 | 2009-09-02 11:58:25 |
+|       1 |       5 | Apple, Inc. | Mac OS     | 9.2        |        100 | 2009-09-02 12:00:23 |
+|       0 |       7 | Apple       | Mac OS     | 9.2.2      |        100 | 2009-09-02 12:03:46 |
++---------+---------+-------------+------------+------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0     | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |         | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 11:55:23 |
+|  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |         | 2009-09-02 11:55:23 |
+|   80 | tcp      |           1 |         5 |       1 |          9 | Apple Personal Websharing httpd |         | 2009-09-02 12:00:42 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+---------+---------------------+
+
+The main GUI will not change since the user identity is still current, but clicking the View icon again will show that only three identites remain.
+
 
 Now reboot the box in to OS X.
+
 Connect again from Firman.
 
-root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
-+---------+---------+-------------+------------+---------------+------------+---------------------+
-| current | fp_type | os_vendor   | os_product | os_version    | confidence | time                |
-+---------+---------+-------------+------------+---------------+------------+---------------------+
-|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2       |          0 | 2009-08-04 15:32:28 |
-|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2       |          0 | 2009-08-04 17:05:56 |
-|       0 |       1 | Apple, Inc. | Mac OS X   | 10.3, 10.4    |          0 | 2009-08-04 17:13:54 |
-|       0 |       1 | FreeBSD     | FreeBSD    | 5.0, 5.1, 5.2 |          0 | 2009-08-04 17:14:03 |
-|       0 |       1 | Apple, Inc. | Mac OS X   | 10.4.8-10.5   |          0 | 2009-08-04 17:14:16 |
-|       0 |       0 | Apple       | Mac OS     | 9.x           |         41 | 2009-08-04 17:14:17 |
-|       1 |       6 | Apple       | Mac OS X   | 10.3.X        |        100 | 2009-08-04 17:14:17 |
-+---------+---------+-------------+------------+---------------+------------+---------------------+
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-| IP         | port | protocol | source_type | source_id | current | service_id | vendor                    | version         | Last                |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder         | 1.0             | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | MACOS_Personal_Websharing |                 | 2009-08-04 15:26:23 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing               |                 | 2009-08-04 15:31:20 |
-| 10.4.12.75 |  427 | tcp      |           2 |         2 |       1 |    1000001 |                           |                 | 2009-08-04 17:14:18 |
-| 10.4.12.75 |  548 | tcp      |           2 |         2 |       1 |    1000002 | Apple AFP                 |                 | 2009-08-04 17:14:18 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Apache                    | 1.3.33 (Darwin) | 2009-08-04 17:13:54 |
-| 10.4.12.75 |   80 | tcp      |           2 |         2 |       1 |          9 | Apache httpd              | 1.3.33          | 2009-08-04 17:14:18 |
-| 10.4.12.75 | 5900 | tcp      |           0 |         0 |       0 |         24 |                           | 003.889         | 2009-08-04 17:14:10 |
-| 10.4.12.75 |   22 | tcp      |           2 |         2 |       1 |         32 | OpenSSH                   | 4.5             | 2009-08-04 17:14:18 |
-| 10.4.12.75 | 5900 | tcp      |           2 |         2 |       1 |         24 | Apple remote desktop vnc  |                 | 2009-08-04 17:14:18 |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-root@glory:~# 
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+-------------+------------+--------------------------------------------------------------+------------+---------------------+
+| current | fp_type | os_vendor   | os_product | os_version                                                   | confidence | time                |
++---------+---------+-------------+------------+--------------------------------------------------------------+------------+---------------------+
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2                                                      |          0 | 2009-09-02 11:50:46 |
+|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2                                                      |          0 | 2009-09-02 11:58:25 |
+|       1 |       5 | Apple, Inc. | Mac OS     | 9.2                                                          |        100 | 2009-09-02 12:00:23 |
+|       0 |       7 | Apple       | Mac OS     | 9.2.2                                                        |        100 | 2009-09-02 12:03:46 |
+|       0 |       1 | Apple, Inc. | Mac OS X   | 10.3, 10.4                                                   |          0 | 2009-09-02 12:09:30 |
+|       0 |       0 | Apple       | Mac OS     | 9.x                                                          |         60 | 2009-09-02 12:09:34 |
+|       0 |       1 | Apple, Inc. | Mac OS X   | 10.1-10.2                                                    |          0 | 2009-09-02 12:09:34 |
+|       1 |       8 | Apple       | Mac OS X   | 10.0,  10.1,  10.2,  10.3,  10.4, Server 10.3.9, Server 10.4 |         20 | 2009-09-02 12:09:34 |
++---------+---------+-------------+------------+--------------------------------------------------------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version         | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0             | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |                 | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apple Personal Websharing httpd |                 | 2009-09-02 11:55:23 |
+|  548 | tcp      |           2 |         2 |       1 |    1000000 |                                 |                 | 2009-09-02 11:55:23 |
+|   80 | tcp      |           1 |         5 |       1 |          9 | Apple Personal Websharing httpd |                 | 2009-09-02 12:00:42 |
+|   80 | tcp      |           0 |         4 |       0 |          9 | Apache                          | 1.3.33 (Darwin) | 2009-09-02 12:09:30 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
 
 A conflict event should be generated and an NMAP scan started.
 
-root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
-+---------+---------+-------------+------------+---------------+------------+---------------------+
-| current | fp_type | os_vendor   | os_product | os_version    | confidence | time                |
-+---------+---------+-------------+------------+---------------+------------+---------------------+
-|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2       |          0 | 2009-08-04 15:32:28 |
-|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2       |          0 | 2009-08-04 17:05:56 |
-|       0 |       1 | Apple, Inc. | Mac OS X   | 10.3, 10.4    |          0 | 2009-08-04 17:13:54 |
-|       0 |       1 | FreeBSD     | FreeBSD    | 5.0, 5.1, 5.2 |          0 | 2009-08-04 17:14:03 |
-|       0 |       1 | Apple, Inc. | Mac OS X   | 10.4.8-10.5   |          0 | 2009-08-04 17:14:16 |
-|       0 |       0 | Apple       | Mac OS     | 9.x           |         41 | 2009-08-04 17:14:17 |
-|       1 |       6 | Apple       | Mac OS X   | 10.3.X        |        100 | 2009-08-04 17:14:17 |
-+---------+---------+-------------+------------+---------------+------------+---------------------+
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-| IP         | port | protocol | source_type | source_id | current | service_id | vendor                    | version         | Last                |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder         | 1.0             | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | MACOS_Personal_Websharing |                 | 2009-08-04 15:26:23 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing               |                 | 2009-08-04 15:31:20 |
-| 10.4.12.75 |  427 | tcp      |           2 |         2 |       1 |    1000001 |                           |                 | 2009-08-04 17:14:18 |
-| 10.4.12.75 |  548 | tcp      |           2 |         2 |       1 |    1000002 | Apple AFP                 |                 | 2009-08-04 17:14:18 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Apache                    | 1.3.33 (Darwin) | 2009-08-04 17:13:54 |
-| 10.4.12.75 |   80 | tcp      |           2 |         2 |       1 |          9 | Apache httpd              | 1.3.33          | 2009-08-04 17:14:18 |
-| 10.4.12.75 | 5900 | tcp      |           0 |         0 |       0 |         24 |                           | 003.889         | 2009-08-04 17:14:10 |
-| 10.4.12.75 |   22 | tcp      |           2 |         2 |       1 |         32 | OpenSSH                   | 4.5             | 2009-08-04 17:14:18 |
-| 10.4.12.75 | 5900 | tcp      |           2 |         2 |       1 |         24 | Apple remote desktop vnc  |                 | 2009-08-04 17:14:18 |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-root@glory:~# 
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+----------------------+------------+--------------------------------------------------------------+------------+---------------------+
+| current | fp_type | os_vendor            | os_product | os_version                                                   | confidence | time                |
++---------+---------+----------------------+------------+--------------------------------------------------------------+------------+---------------------+
+|       0 |       1 | Apple, Inc.          | Mac OS     | 9.0-9.2                                                      |          0 | 2009-09-02 11:50:46 |
+|       0 |       2 | Apple, Inc.          | Mac OS     | 9.0-9.2                                                      |          0 | 2009-09-02 11:58:25 |
+|       1 |       5 | Apple, Inc.          | Mac OS     | 9.2                                                          |        100 | 2009-09-02 12:00:23 |
+|       0 |       7 | Apple                | Mac OS     | 9.2.2                                                        |        100 | 2009-09-02 12:03:46 |
+|       0 |       1 | Apple, Inc.          | Mac OS X   | 10.3, 10.4                                                   |          0 | 2009-09-02 12:09:30 |
+|       0 |       1 | Apple, Inc.          | Mac OS X   | 10.1-10.2                                                    |          0 | 2009-09-02 12:09:34 |
+|       1 |       8 | FreeBSD Project, The | FreeBSD    | 5.0, 5.1, 5.2                                                |         16 | 2009-09-02 12:09:47 |
+|       0 |       0 | Apple                | Mac OS     | 9.x                                                          |         50 | 2009-09-02 12:09:47 |
+|       0 |       1 | FreeBSD              | FreeBSD    | 5.0, 5.1, 5.2                                                |          0 | 2009-09-02 12:09:47 |
+|       1 |       8 | Apple                | Mac OS X   | 10.0,  10.1,  10.2,  10.3,  10.4, Server 10.3.9, Server 10.4 |         16 | 2009-09-02 12:09:47 |
+|       0 |       6 | Apple                | Mac OS X   | 10.3.X                                                       |        100 | 2009-09-02 12:10:07 |
++---------+---------+----------------------+------------+--------------------------------------------------------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version         | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0             | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |                 | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apache httpd                    | 1.3.33          | 2009-09-02 12:10:08 |
+|  548 | tcp      |           2 |         2 |       1 |    1000002 | Apple AFP                       |                 | 2009-09-02 12:10:08 |
+|   80 | tcp      |           1 |         5 |       1 |          9 | Apple Personal Websharing httpd |                 | 2009-09-02 12:00:42 |
+|   80 | tcp      |           0 |         4 |       0 |          9 | Apache                          | 1.3.33 (Darwin) | 2009-09-02 12:09:30 |
+| 5900 | tcp      |           0 |         0 |       0 |         24 |                                 | 003.889         | 2009-09-02 12:09:50 |
+|   22 | tcp      |           2 |         2 |       1 |         32 | OpenSSH                         | 4.5             | 2009-09-02 12:10:08 |
+|  427 | tcp      |           2 |         2 |       1 |    1000001 |                                 |                 | 2009-09-02 12:10:08 |
+| 5900 | tcp      |           2 |         2 |       1 |         24 | Apple remote desktop vnc        |                 | 2009-09-02 12:10:08 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+
+The GUI will show an OS conflict, and before the NMAP scan completes there will be a service conflict as well.  The service conflict goes away when the NMAP scan is complete, but don't know yet whether that is correct behavior.
 
 Log in to the box and connect to Firman with Safari. The backend should show a new client fingerprint:
 
-
-root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select inet_ntoa(ipaddr) as IP, port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
-+---------+---------+-------------+------------+-------------------------------------------------------------------+------------+---------------------+
-| current | fp_type | os_vendor   | os_product | os_version                                                        | confidence | time                |
-+---------+---------+-------------+------------+-------------------------------------------------------------------+------------+---------------------+
-|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2                                                           |          0 | 2009-08-04 15:32:28 |
-|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2                                                           |          0 | 2009-08-04 17:05:56 |
-|       0 |       1 | Apple, Inc. | Mac OS X   | 10.3, 10.4                                                        |          0 | 2009-08-04 17:13:54 |
-|       0 |       1 | FreeBSD     | FreeBSD    | 5.0, 5.1, 5.2                                                     |          0 | 2009-08-04 17:14:03 |
-|       0 |       1 | Apple, Inc. | Mac OS X   | 10.4.8-10.5                                                       |          0 | 2009-08-04 17:14:16 |
-|       1 |       6 | Apple       | Mac OS X   | 10.3.X                                                            |        100 | 2009-08-04 17:14:17 |
-|       0 |       2 | Apple, Inc. | Mac OS X   | 10.3, 10.4                                                        |          0 | 2009-08-04 17:21:21 |
-|       0 |       0 | Apple       | Mac OS X   | 10.4.8,  10.4.9,  10.4.10,  10.4.11, Server 10.4.8, Server 10.4.9 |         56 | 2009-08-04 17:21:21 |
-+---------+---------+-------------+------------+-------------------------------------------------------------------+------------+---------------------+
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-| IP         | port | protocol | source_type | source_id | current | service_id | vendor                    | version         | Last                |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder         | 1.0             | 2009-08-04 15:31:20 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | MACOS_Personal_Websharing |                 | 2009-08-04 15:26:23 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing               |                 | 2009-08-04 15:31:20 |
-| 10.4.12.75 |  427 | tcp      |           2 |         2 |       1 |    1000001 |                           |                 | 2009-08-04 17:14:18 |
-| 10.4.12.75 |  548 | tcp      |           2 |         2 |       1 |    1000002 | Apple AFP                 |                 | 2009-08-04 17:14:18 |
-| 10.4.12.75 |   80 | tcp      |           0 |         0 |       0 |          9 | Apache                    | 1.3.33 (Darwin) | 2009-08-04 17:13:54 |
-| 10.4.12.75 |   80 | tcp      |           2 |         2 |       1 |          9 | Apache httpd              | 1.3.33          | 2009-08-04 17:14:18 |
-| 10.4.12.75 | 5900 | tcp      |           0 |         0 |       0 |         24 |                           | 003.889         | 2009-08-04 17:14:10 |
-| 10.4.12.75 |   22 | tcp      |           2 |         2 |       1 |         32 | OpenSSH                   | 4.5             | 2009-08-04 17:14:18 |
-| 10.4.12.75 | 5900 | tcp      |           2 |         2 |       1 |         24 | Apple remote desktop vnc  |                 | 2009-08-04 17:14:18 |
-+------------+------+----------+-------------+-----------+---------+------------+---------------------------+-----------------+---------------------+
-root@glory:~# 
+root@glory:/var/tmp# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(last_seen) as time from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(last_used) as Last from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
++---------+---------+-------------+------------+-----------------------------------------+------------+---------------------+
+| current | fp_type | os_vendor   | os_product | os_version                              | confidence | time                |
++---------+---------+-------------+------------+-----------------------------------------+------------+---------------------+
+|       0 |       1 | Apple, Inc. | Mac OS     | 9.0-9.2                                 |          0 | 2009-09-02 11:50:46 |
+|       0 |       2 | Apple, Inc. | Mac OS     | 9.0-9.2                                 |          0 | 2009-09-02 11:58:25 |
+|       1 |       5 | Apple, Inc. | Mac OS     | 9.2                                     |        100 | 2009-09-02 12:00:23 |
+|       0 |       7 | Apple       | Mac OS     | 9.2.2                                   |        100 | 2009-09-02 12:03:46 |
+|       0 |       1 | Apple, Inc. | Mac OS X   | 10.3, 10.4                              |          0 | 2009-09-02 12:09:30 |
+|       0 |       1 | Apple, Inc. | Mac OS X   | 10.1-10.2                               |          0 | 2009-09-02 12:09:34 |
+|       0 |       1 | FreeBSD     | FreeBSD    | 5.0, 5.1, 5.2                           |          0 | 2009-09-02 12:09:47 |
+|       0 |       6 | Apple       | Mac OS X   | 10.3.X                                  |        100 | 2009-09-02 12:10:07 |
+|       0 |       2 | Apple, Inc. | Mac OS X   | 10.3, 10.4                              |          0 | 2009-09-02 12:48:18 |
+|       0 |       0 | Apple       | Mac OS     | 9.x                                     |         37 | 2009-09-02 12:48:18 |
+|       1 |       8 | Apple       | Mac OS X   | 10.3,  10.4, Server 10.3.9, Server 10.4 |         37 | 2009-09-02 12:48:18 |
++---------+---------+-------------+------------+-----------------------------------------+------------+---------------------+
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+| port | protocol | source_type | source_id | current | service_id | vendor                          | version         | Last                |
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
+|   80 | tcp      |           0 |         0 |       0 |          9 | PersonalNetFinder               | 1.0             | 2009-09-02 11:54:14 |
+|   80 | tcp      |           0 |         0 |       0 |          9 | Web Sharing                     |                 | 2009-09-02 11:54:14 |
+|   80 | tcp      |           2 |         2 |       1 |          9 | Apache httpd                    | 1.3.33          | 2009-09-02 12:10:08 |
+|  548 | tcp      |           2 |         2 |       1 |    1000002 | Apple AFP                       |                 | 2009-09-02 12:10:08 |
+|   80 | tcp      |           1 |         5 |       1 |          9 | Apple Personal Websharing httpd |                 | 2009-09-02 12:00:42 |
+|   80 | tcp      |           0 |         4 |       0 |          9 | Apache                          | 1.3.33 (Darwin) | 2009-09-02 12:09:30 |
+| 5900 | tcp      |           0 |         0 |       0 |         24 |                                 | 003.889         | 2009-09-02 12:09:50 |
+|   22 | tcp      |           2 |         2 |       1 |         32 | OpenSSH                         | 4.5             | 2009-09-02 12:10:08 |
+|  427 | tcp      |           2 |         2 |       1 |    1000001 |                                 |                 | 2009-09-02 12:10:08 |
+| 5900 | tcp      |           2 |         2 |       1 |         24 | Apple remote desktop vnc        |                 | 2009-09-02 12:10:08 |
++------+----------+-------------+-----------+---------+------------+---------------------------------+-----------------+---------------------+
 
 The GUI will still show the old RNA ident, but perhaps with a lower confidence.
  
