@@ -1,18 +1,20 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.18 2009/08/20 11:14:55 larry Exp $
+# $Id: chk_cores.sh,v 1.19 2009/08/21 11:15:46 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
 
-while getopts 'sx:' OPTION
+while getopts 'fsx:' OPTION
 do
     case $OPTION in
     x)    EXCLUDE="$EXCLUDE $OPTARG"
         ;;
     s)    SHOW=1
         ;;
-    h|?)  echo "Valid options are '-x exclude_host' and '-s' to show hosts"
+    f)    FULL=1
+        ;;
+    h|?)  echo "Valid options are '-x exclude_host', '-f' to show all, and '-s' to show hosts"
           exit 0
         ;;
     esac
@@ -44,7 +46,7 @@ if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
 then
 	cd $SF_DATA_ROOT_PATH/var/tmp/core
 	COUNT=$(ls core* | wc -l)
-	if [ 5 -lt $COUNT ]
+	if [ 5 -lt $COUNT && -z "$FULL" ]
 	then
 		echo "=============================================================================="
 		echo "++++++++++++++++++++++++ Found ${COUNT// /} cores in /var/tmp ++++++++++++++++++++++++++"
