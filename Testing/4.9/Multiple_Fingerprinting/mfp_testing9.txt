@@ -1,4 +1,4 @@
-# $Id: mfp_testing9.txt,v 1.2 2009/09/08 10:36:34 larry Exp $
+# $Id: mfp_testing9.txt,v 1.3 2009/10/20 14:02:27 larry Exp $
 
 Set up DC with RNA sensor/DE
 
@@ -11,6 +11,7 @@ Set up nmap scan remediation
 Set up and activate compliance rule/policy for OS conflict
 	an RNA event occurs + the OS or service identity for a host has a conflict
 	5 minute snooze (for now)
+In the policy, set the NMAP scan as the response for the conflict rule.
 			
 Create a White List which includes the 10.4.12 network and does not allow OS 9.  Add that White List to the policy which you activated.
 
@@ -317,10 +318,7 @@ root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_p
 | 5900 | tcp      |           2 |         2 |       1 |         24 | Apple remote desktop vnc |                 | 2009-10-20 12:36:34 | 2009-10-20 12:36:34 |
 +------+----------+-------------+-----------+---------+------------+--------------------------+-----------------+---------------------+---------------------+
 
-Edit the system policy to move the FineGrain application above NMAP.  Save and apply.
 
-
- 
 After a period of time > the timeout period:
 
 root@glory:~# mysql -padmin sfsnort -e 'select current, fp_type, os_vendor, os_product, os_version, confidence, from_unixtime(created) as Created, from_unixtime(last_seen) as LastSeen from rna_ip_os_map where ipaddr=inet_aton("10.4.12.75") order by last_seen;'; mysql -padmin sfsnort -e 'select port, protocol, source_type, source_id, current, service_id, vendor, version, from_unixtime(created) as Created, from_unixtime(last_used) as LastSeen from rna_service_info where inet_ntoa(ipaddr) = "10.4.12.75";'
