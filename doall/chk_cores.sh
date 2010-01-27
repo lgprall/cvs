@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.20 2009/09/15 12:10:57 larry Exp $
+# $Id: chk_cores.sh,v 1.21 2009/09/16 13:55:28 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -44,6 +44,14 @@ then
 	for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
 	. /etc/sf/ims.conf
 	FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
+        grep -q "core;" $FILE
+	if [ $? -ne 0 ]
+	then
+		echo
+		echo "       >>>>>>>> Cores not turned on"
+		echo
+		next
+	fi
 	if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
 	then
 		cd $SF_DATA_ROOT_PATH/var/tmp/core
