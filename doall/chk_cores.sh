@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.21 2009/09/16 13:55:28 larry Exp $
+# $Id: chk_cores.sh,v 1.22 2010/01/27 16:51:29 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -101,7 +101,6 @@ else
 		cd $SF_DATA_ROOT_PATH/var/tmp/core
 		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
 		echo
-		fi
 	fi
 
 	ls $SF_DATA_ROOT_PATH/var/sf/detection_engines/*/instance*/var/tmp/core > /dev/null 2>&1
@@ -115,7 +114,6 @@ else
 			if [ ! -f core* ]; then continue; fi
 			echo "   ====> in $dir"
 			for file in $(ls -tr); do ls -ld --full-time $file; file $file; done
-			fi
 			echo
 		done
 	fi
