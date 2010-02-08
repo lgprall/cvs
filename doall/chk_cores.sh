@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.22 2010/01/27 16:51:29 larry Exp $
+# $Id: chk_cores.sh,v 1.23 2010/02/08 19:32:25 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
 
-while getopts 'fsx:' OPTION
+while getopts 'svx:' OPTION
 do
     case $OPTION in
     x)    EXCLUDE="$EXCLUDE $OPTARG"
         ;;
     s)    SHOW=1
         ;;
-    f)    FULL=1
+    v)    FULL=1
         ;;
-    h|?)  echo "Valid options are '-x exclude_host', '-f' to show all, and '-s' to show hosts"
+    h|?)  echo "Valid options are '-x exclude_host', '-v' to show all, and '-s' to show hosts"
           exit 0
         ;;
     esac
