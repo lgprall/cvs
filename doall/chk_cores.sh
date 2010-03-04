@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.23 2010/02/08 19:32:25 larry Exp $
+# $Id: chk_cores.sh,v 1.24 2010/02/08 19:34:59 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -85,7 +85,7 @@ then
 				echo "++++++++++++++++++++++++++++++ Found ${COUNT// /} cores ++++++++++++++++++++++++++++++++"
 				echo "=============================================================================="
 			else
-				for file in $(ls -tr); do ls -ld --full-time $file; file $file; done
+				for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done
 			fi
 			echo
 		done
@@ -113,7 +113,7 @@ else
 			cd $dir
 			if [ ! -f core* ]; then continue; fi
 			echo "   ====> in $dir"
-			for file in $(ls -tr); do ls -ld --full-time $file; file $file; done
+			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done
 			echo
 		done
 	fi
