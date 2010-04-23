@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.15 2009/05/12 13:25:07 larry Exp $
+# $Id: set_cores.sh,v 1.16 2010/04/23 11:05:13 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
 
 EXCLUDE=""
@@ -71,7 +71,7 @@ then
 fi
 if [ -z '$CORES' ]
 then
-	grep -q "logfile /var/tmp/SFD.log;" $FILE
+	grep -q "logfile /var/log/SFD.log;" $FILE
 	if [ $? -ne 0 ]
 	then
 		/bin/ed $FILE <<-EOF1
