@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.14 2009/05/12 11:47:40 larry Exp $
+# $Id: set_cores.sh,v 1.15 2009/05/12 13:25:07 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
 
 EXCLUDE=""
@@ -77,7 +77,7 @@ then
 		/bin/ed $FILE <<-EOF1
 		/option --nodaemon/a
 		    option --debug;
-		    logfile /var/tmp/SFD.log;
+		    logfile /var/log/SFD.log;
 		.
 		wq
 		EOF1
