@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.24 2010/02/08 19:34:59 larry Exp $
+# $Id: chk_cores.sh,v 1.25 2010/03/04 18:26:10 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -51,6 +51,13 @@ then
 		echo "       >>>>>>>> Cores not turned on"
 		echo
 		next
+	fi
+        ls -l /var/*/SFD.log > /dev/null 2>&1
+	if [ $? -ne 0 ]
+	then
+		echo
+		echo "       >>>>>>>> SFD logging not turned on"
+		echo
 	fi
 	if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
 	then
