@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# $Id: update_support.sh,v 1.2 2009/10/01 11:59:50 larry Exp $
+# $Id: update_support.sh,v 1.3 2010/08/05 10:22:45 larry Exp $
 
 # Must be run from current build (Testing) directory
 
-ssh frodo rm -f /home/www/support_files/auto/files/*SamplePatch*.sh
+ssh install rm -f /home/www/support_files/auto/files/*SamplePatch*.sh
 cd /nfs/netboot/upgrades/Testing
 cd $(ls -tr | tail -1)
 for file in *SamplePatch*.sh
