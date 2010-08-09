@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.25 2010/03/04 18:26:10 larry Exp $
+# $Id: chk_cores.sh,v 1.26 2010/06/16 15:40:08 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -52,7 +52,7 @@ then
 		echo
 		next
 	fi
-        ls -l /var/*/SFD.log > /dev/null 2>&1
+        grep -q "/var/log/SFD.log" $FILE
 	if [ $? -ne 0 ]
 	then
 		echo
