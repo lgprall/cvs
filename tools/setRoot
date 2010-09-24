@@ -1,21 +1,30 @@
 #!/opt/local/bin/expect
 
-# $Id$
+# $Id: setRoot,v 1.1 2010/09/24 17:30:39 larry Exp $
 
+# Have to get in as 'admin' first, then get a root shell
 spawn ssh "admin@$argv"
 expect "Password:"
 send "Sourcefire\r"
+
+#  Might be a CLI box, so we have to get to expert mode first, then to root
 expect "> " { send "expert\r" }
+
 expect "admin@"
 send "sudo -i\r"
+#  This is conditional because sudo might have been run recently enough not
+#  to need a password
 expect "Password:" { send "Sourcefire\r" }
 expect "root@"
+
 send "ed /etc/ssh/sshd_config\r"
 expect "2*"
 send "/PermitRootLogin\r"
 expect PermitRootLogin
 send "c\rPermitRootLogin without-password\r.\rwq\r"
 expect "root@"
+#  Because we now overwrite /etc/ssh/sshd_config every time System Policy is saved
+#  we need to zap the template as well
 send "ed /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt\r"
 expect "2*"
 send "/PermitRootLogin\r"
@@ -25,6 +34,8 @@ expect "root@"
 send "/etc/rc.d/init.d/sshd restart\r"
 expect "root@"
 send "exit\r"
+
+# Again have to account for the possibility of a CLI box
 expect "admin@" { send "exit\r" }
 expect "> " { send "exit\r" }
 puts "\n"
