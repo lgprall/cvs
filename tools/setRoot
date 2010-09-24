@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoot,v 1.1 2010/09/24 17:30:39 larry Exp $
+# $Id: setRoot,v 1.2 2010/09/24 17:36:21 larry Exp $
 
 # Have to get in as 'admin' first, then get a root shell
 spawn ssh "admin@$argv"
@@ -23,9 +23,24 @@ send "/PermitRootLogin\r"
 expect PermitRootLogin
 send "c\rPermitRootLogin without-password\r.\rwq\r"
 expect "root@"
+
 #  Because we now overwrite /etc/ssh/sshd_config every time System Policy is saved
-#  we need to zap the template as well
+#  we need to zap the templates as well
 send "ed /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt\r"
+expect "2*"
+send "/PermitRootLogin\r"
+expect PermitRootLogin
+send "c\rPermitRootLogin without-password\r.\rwq\r"
+expect "root@"
+
+send "ed /usr/local/sf/htdocs/html_templates/pam/sshd_config.tt\r"
+expect "2*"
+send "/PermitRootLogin\r"
+expect PermitRootLogin
+send "c\rPermitRootLogin without-password\r.\rwq\r"
+expect "root@"
+
+send "ed /usr/local/sf/htdocs/localization/en_US/templates/html_templates/pam/sshd_config.tt\r"
 expect "2*"
 send "/PermitRootLogin\r"
 expect PermitRootLogin
@@ -34,7 +49,6 @@ expect "root@"
 send "/etc/rc.d/init.d/sshd restart\r"
 expect "root@"
 send "exit\r"
-
 # Again have to account for the possibility of a CLI box
 expect "admin@" { send "exit\r" }
 expect "> " { send "exit\r" }
