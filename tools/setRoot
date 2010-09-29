@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoot,v 1.2 2010/09/24 17:36:21 larry Exp $
+# $Id: setRoot,v 1.3 2010/09/24 18:14:50 larry Exp $
 
 # Have to get in as 'admin' first, then get a root shell
 spawn ssh "admin@$argv"
@@ -17,35 +17,9 @@ send "sudo -i\r"
 expect "Password:" { send "Sourcefire\r" }
 expect "root@"
 
-send "ed /etc/ssh/sshd_config\r"
-expect "2*"
-send "/PermitRootLogin\r"
-expect PermitRootLogin
-send "c\rPermitRootLogin without-password\r.\rwq\r"
+send "perl -pi -e 's/PermitRootLogin no/PermitRootLogin without-password/' /etc/ssh/sshd_config /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/localization/en_US/templates/html_templates/pam/sshd_config.tt\r"
 expect "root@"
 
-#  Because we now overwrite /etc/ssh/sshd_config every time System Policy is saved
-#  we need to zap the templates as well
-send "ed /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt\r"
-expect "2*"
-send "/PermitRootLogin\r"
-expect PermitRootLogin
-send "c\rPermitRootLogin without-password\r.\rwq\r"
-expect "root@"
-
-send "ed /usr/local/sf/htdocs/html_templates/pam/sshd_config.tt\r"
-expect "2*"
-send "/PermitRootLogin\r"
-expect PermitRootLogin
-send "c\rPermitRootLogin without-password\r.\rwq\r"
-expect "root@"
-
-send "ed /usr/local/sf/htdocs/localization/en_US/templates/html_templates/pam/sshd_config.tt\r"
-expect "2*"
-send "/PermitRootLogin\r"
-expect PermitRootLogin
-send "c\rPermitRootLogin without-password\r.\rwq\r"
-expect "root@"
 send "/etc/rc.d/init.d/sshd restart\r"
 expect "root@"
 send "exit\r"
