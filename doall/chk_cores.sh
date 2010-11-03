@@ -73,6 +73,20 @@ then
 			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
 			echo
 		fi
+	elif [ -d $SF_DATA_ROOT_PATH/var/common/ ]
+	then
+		cd $SF_DATA_ROOT_PATH/var/common/
+		COUNT=$(ls core* | wc -l)
+		if [ 5 -lt $COUNT ]
+		then
+			echo "=============================================================================="
+			echo "+++++++++++++++++++++++ Found ${COUNT// /} cores in /var/common ++++++++++++++++++++++++"
+			echo "=============================================================================="
+			echo
+		else
+			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
+			echo
+		fi
 	fi
 
 	ls $SF_DATA_ROOT_PATH/var/sf/detection_engines/*/instance*/var/tmp/core > /dev/null 2>&1
