@@ -1,0 +1,51 @@
+#!/opt/local/bin/expect
+# $Id$
+
+source ~/lib/users
+
+spawn telnet oz 110
+
+expect "Dovecot ready."
+foreach user $USERS {
+
+send "user $user\r"
+expect "OK"
+send "pass junk\r"
+expect "ERR"
+}
+send "quit\r"
+
+spawn telnet oz 25
+
+expect 220
+send "helo there\r"
+expect 250
+foreach user $USERS {
+send "mail from: $user.sourcefire.com\r"
+expect 250
+send "rcpt to: test\r"
+expect 250
+send "data\r"
+expect 354
+send "TEST\r.\r"
+expect 250
+}
+send "quit\r"
+
+set total [llength $USERS]
+set count 1
+
+spawn telnet oz 110
+
+expect "Dovecot ready."
+send "user test\r"
+expect OK
+send "pass test\r"
+expect OK
+
+while {$count <= $total} {
+send "dele $count\r"
+incr count 1
+expect OK
+}
+send "quit\r"
