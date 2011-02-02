@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.26 2010/06/16 15:40:08 larry Exp $
+# $Id: chk_cores.sh,v 1.28 2010/11/03 10:52:53 larry Exp $
 # Check for core files on a list of hosts
 
 EXCLUDE=""
@@ -120,6 +120,11 @@ else
 	if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
 	then
 		cd $SF_DATA_ROOT_PATH/var/tmp/core
+		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
+		echo
+	elif [ -d $SF_DATA_ROOT_PATH/var/common/ ]
+	then
+		cd $SF_DATA_ROOT_PATH/var/common/
 		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
 		echo
 	fi
