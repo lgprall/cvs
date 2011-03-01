@@ -1,0 +1,416 @@
+#!/usr/local/bin/perl -w
+
+# get_hosts
+# $Id: gethosts,v 1.9 2009/08/25 16:29:18 larry Exp $  $Name:  $
+# Collect hosts, trying very hard not to hit any more than once...
+
+use strict;
+
+use Net::hostent;
+use IO::Socket;
+use Socket;
+use LWP::UserAgent;
+use HTTP::Request;
+use Getopt::Long;
+use DB_File::Lock;
+use Fcntl qw( :DEFAULT :flock );
+use Errno "EAGAIN";
+use POSIX qw( :sys_wait_h :signal_h WNOHANG);
+use ua;
+
+use constant TMP           => "/tmp/gh$</";
+use constant SOCK_PATH     => TMP . "hostserv";
+use constant HOSTS_DB      => TMP . "hosts.db";
+use constant NAMES_DB      => TMP . "names.db";
+use constant IPS_DB        => TMP . "ips.db";
+use constant LEVEL_DB      => TMP . "next_level.db";
+
+mkdir TMP;
+
+# Shouldn't need this, but we do
+my $GH_Lockfile   = TMP . "gh_LOCK";
+
+my $time_path     = TMP . "time";
+
+$| = 1;
+$SIG{CHLD} = \&REAPER;
+$SIG{TERM} = $SIG{INT} = sub { exit 0 };
+
+( my $ME = $0 ) =~ s@.*/@@;
+my $USAGE = qq(USAGE: $ME [-h][-m max][ -p procs][-o out_file][-f in_file] [s0 s1 ..]\n);
+
+#
+# Options
+#
+my $max = 1000000;  # That's why it's an option. Right?
+my $procs = 3;
+my $out;
+my $file;
+my $help;
+GetOptions( 'help' => \$help,
+			'max=i' => \$max,
+            'procs=i' => \$procs,
+            'out=s'   => \$out,
+            'file=s'    => \$file ) or die $USAGE;
+
+if ( defined $out ) {
+	if ( -f $out ) {
+		print "Can't overwrite an existing file: $out.\n";
+		exit 0;
+	}
+	open OUT, ">$out";
+	select OUT;
+}
+
+if ( defined $help ) {
+	die $USAGE;
+}
+
+#
+# Priming the pump
+#
+unlink SOCK_PATH, HOSTS_DB, NAMES_DB, IPS_DB, LEVEL_DB, $time_path;
+
+# The %host hash will contain the date which we dole out to the workers.
+# Initially, the keys will just be a list of hostnames; after exhausting
+# the starting list, the keys become a bit more complex containing both
+# a hostname and the IPs for that host crammed into a string.
+my @HOSTS;
+if ( defined $file ) {
+	die $USAGE if @ARGV;
+	die qq(Can't read "$file": $!\n) unless -r $file;
+	open IN, "<$file";
+	@HOSTS = <IN>;
+	close IN;
+} elsif ( @ARGV ) {
+	@HOSTS = @ARGV;
+} else {
+	@HOSTS = <DATA>;
+}
+chomp @HOSTS;
+chomp( my @ary = <DATA> );
+tie my %host, 'DB_File::Lock', HOSTS_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write';
+@host{@HOSTS} = (1) x @HOSTS;
+untie %host;
+
+# This hash will contain the hostnames of the visited sites
+tie my %visited_name, 'DB_File::Lock', NAMES_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write';
+%visited_name = ();
+untie %visited_name;
+
+# This hash will contain the possible IPs for visited sites. The presence of
+# an IP in the hash doesn't actually mean that the IP was visited, it simply
+# means that it is one of the possible IPs for a visited sited.  Don't hit it.
+tie my %visited_ip, 'DB_File::Lock', IPS_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write';
+%visited_ip = ();
+untie %visited_ip;
+
+# This hash contains the data collected from the visited sites.  It is used
+# to refill the pipeline; i.e., the %host hash
+tie my %next_level, 'DB_File::Lock', LEVEL_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write';
+%next_level = ();
+untie %next_level;
+
+#
+# Spawn the workers...
+#
+my @pids;
+my $ID = 0;
+for ( 1 .. $procs ) {
+	my $pid;
+	$ID++;
+	FORK:
+	if ( $pid = fork ) {
+		# I'm da boss!
+		push @pids, $pid
+	} elsif ( defined $pid ) {
+		getem();
+		exit 0;
+	} elsif ( $! == EAGAIN ) {
+		sleep 5;
+		redo FORK;
+	} else {
+		die "Can't fork: $!\n";
+	}
+}
+
+##########
+# Main Process
+##########
+umask(0111);
+open TIME, ">$time_path";
+my $time = time;
+print TIME "$time\n";
+close TIME;
+my $date = `date`;
+print "Starting at $date";
+
+my $listen = IO::Socket::UNIX->new( Local => SOCK_PATH, 
+                                    Listen => SOMAXCONN ) or die "Socket: $!";
+
+# Now we get set to fork a few more processes: we're going to be a forking server
+while (1) {
+	next unless my $connected = $listen->accept();
+	die "Can't fork!" unless defined (my $child = launch_child());
+	if ($child) {
+		tie my %n, 'DB_File', NAMES_DB, O_RDONLY;
+		if ( (my $total = keys %n) > $max ) {
+			untie %n;
+			print "\n#####\n## Have $total hosts; bailing out.\n#####\n";
+			kill 9, @pids;
+			sleep 5;
+			unlink SOCK_PATH;
+			untie %visited_name;
+			untie %visited_ip;
+			exit 0;
+		}
+		untie %n;
+		push @pids, $child;
+		close $connected;
+	} else {
+		close $listen;
+		serve($connected);
+		exit 0;
+	}
+}
+
+#############################################################
+
+sub launch_child {
+  my $signals = POSIX::SigSet->new(SIGINT,SIGCHLD,SIGTERM,SIGHUP);
+  sigprocmask(SIG_BLOCK,$signals);  # block inconvenient signals
+  return unless defined (my $child = fork());
+  unless ($child) {
+    $SIG{$_} = 'DEFAULT' foreach qw(HUP INT TERM CHLD);
+  }
+  sigprocmask(SIG_UNBLOCK,$signals);  # unblock signals
+  return $child;
+}
+
+sub serve {
+	return unless my $c = shift;
+	chomp $c;
+	chomp (my $q = <$c>);
+	my $me = $$;
+	my %host;
+	my %visited_name;
+	my %visited_ip;
+	my %next_level;
+	my $host;
+	if ( $q eq "gimme" ) {
+		my @dead;
+		# Belt and suspenders. Sigh.  It appears that DB_File::Lock can't
+		# prevent simultaneous access, and neither does this, but it helps.
+		open LOCK, ">$GH_Lockfile" or die "Can't open lockfile.\n";
+		flock LOCK, LOCK_EX or die "Can't lock lockfile.\n";
+		tie my %host, 'DB_File::Lock', HOSTS_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write'
+			or die qq(Can't tie host db: $!);
+		# $host is in the form:
+		# hostname#ip,ip,ip
+		HOST: while (my $h_ip = each %host ) {
+			last unless $h_ip;
+			# It's used up...
+			push @dead, $h_ip;
+			my ($name, $ips) = split /#/, $h_ip;
+			tie %visited_name, 'DB_File::Lock', NAMES_DB, O_RDONLY, 0600, $DB_HASH, 'read'
+				or die qq(Can't tie vis name: $!);
+			next if $visited_name{$name};
+			if ( $ips ) {
+				tie %visited_ip, 'DB_File::Lock', IPS_DB, O_RDONLY, 0600, $DB_HASH, 'read'
+					or die qq(Can't tie vis ip: $!);
+				my @ips = split /,/, $ips;
+				foreach my $ip ( @ips ) {
+					next HOST if $visited_ip{$ip};
+				}
+			}
+			$host = $name;
+			last;
+		}
+		$host ||= "NONE";
+		delete @host{@dead};
+		my $host_count = keys %host;
+		untie %host;
+		untie %visited_name;
+		untie %visited_ip;
+		print $c $host;
+		# If we've emptied the supply we need to replenish it before 
+		# releasing our locks.
+		unless ( $host_count ) {
+			tie my %next_level, 'DB_File::Lock', LEVEL_DB, O_RDONLY, 0600, $DB_HASH, 'read'
+				or die qq(Can't tie level: $!); 
+			my $next_hosts = keys %next_level;
+			untie %next_level;
+			# We can't refill from %next_level unless somebody has put
+			# something in it, so we'll just wait until they do.
+			while ( not $next_hosts ) {
+				sleep 5;
+				tie my %next_level, 'DB_File::Lock', LEVEL_DB, O_RDONLY, 0600, $DB_HASH, 'read'
+					or die "Can't tie level: $!\n";
+				$next_hosts = keys %next_level;
+				untie %next_level;
+			}
+			# Now we'll copy the collected hosts into the %host hash and
+			# start over.
+			tie %host, 'DB_File::Lock',HOSTS_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write'
+				or die "host tie failed: $!";
+			tie %next_level, 'DB_File::Lock', LEVEL_DB, O_RDONLY, 0600, $DB_HASH, 'write'
+				or die qq(Can't tie level: $!);
+			while (my ($k, $v ) = each %next_level ) {
+				$host{$k} = $v;
+			}
+			untie %host;
+			%next_level = ();
+			untie %next_level;
+		}
+		close LOCK;
+		exit 0;
+	}
+
+	elsif ( $q eq "hereyago" ) {
+		my $string = <$c>;
+		# The data is initially pipe separated; the first element is the
+		# the visited host; the others are the collected hosts.
+		chomp(my @ary = split /\|/, $string, 2);
+		my ($visited, $visited_ips ) = split /#/, $ary[0];
+		tie %visited_name, 'DB_File::Lock', NAMES_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write'
+			or die qq(Can't tie name: $!);
+		$visited_name{lc($visited)}++;
+		my $total = keys %visited_name;
+		untie %visited_name;
+		tie %visited_ip, 'DB_File::Lock', IPS_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write'
+			or die qq(Can't tie ip: $!);
+		foreach my $visited_ip ( split /,/, $visited_ips ) {
+			$visited_ip{$visited_ip}++;
+		}
+		untie %visited_ip;
+		my @next = split /\|/, $ary[1] if $ary[1];
+		HOST:
+		foreach my $n ( @next ) {
+			my ( $h, $ips ) = split /#/, $n;
+			my @ips = split /,/, $ips;
+			# we won't mark these as visited just yet
+			tie %visited_name, 'DB_File::Lock', NAMES_DB, O_RDONLY, 0600, $DB_HASH, 'read'
+				or die qq(Can't tie name: $!);
+			next if $visited_name{lc($h)};
+			untie %visited_name;
+			tie %visited_ip, 'DB_File::Lock', IPS_DB, O_RDONLY, 0600, $DB_HASH, 'read'
+				or die qq(Can't tie ip: $!);
+			foreach my $ip ( @ips ) {
+				next HOST if $visited_ip{$ip};
+			}
+			untie %visited_ip;
+			tie %next_level, 'DB_File::Lock', LEVEL_DB, O_RDWR|O_CREAT, 0600, $DB_HASH, 'write'
+				or die qq(Can't tie level: $!);
+			$next_level{lc($n)}++;
+			untie %next_level;
+		}
+		my $t1 = time;
+		open TIME, "<$time_path";
+		unless (flock(TIME, LOCK_SH | LOCK_NB)) {
+			flock(TIME, LOCK_SH);
+		}
+		chomp (my $time = <TIME> );
+		my $interval = $t1 - $time;
+		if ( $t1 - $time > 9 ) {
+			close TIME;
+			sysopen( TIME, "$time_path", O_WRONLY | O_CREAT);
+			flock(TIME, LOCK_EX);
+			truncate(TIME, 0);
+			print TIME "$t1\n";
+			print "\n######\n## Total of $total hosts visited -- ", scalar localtime($t1), ".\n######\n\n"
+		}
+		close TIME;
+		exit 0;
+	} 
+}
+
+sub getem {
+	my $host;
+	my $me = $ID;
+		
+	my $ua = LWP::UserAgent->new();
+	my $agent = $USER_AGENTS[ int(rand(@USER_AGENTS))];
+	$ua->agent($agent);
+	$ua->timeout(30);
+	
+	$SIG{PIPE} = sub { exit 0; };
+	my $sock;
+	# Since the children were spawned before the server is set up, we'll
+	# have to wait a bit, and we have to do it inside an eval loop.
+	while ( not defined eval { $sock = IO::Socket::UNIX->new( SOCK_PATH ) } ) {
+		sleep 1;
+	}
+	$| = 1;
+	while ( 1 ) {
+		print $sock "gimme\n";
+		chomp( $host = <$sock>);
+		$sock->close;
+		# If the server couldn't get us a host he'll pass NONE.
+		next unless $host and $host ne 'NONE';
+		# This is to split apart the base host and any port designation.
+		$host =~ s/(:\d+)$// and (my $port = $1) =~ s/^://;
+		my $h;
+		unless ($h = gethost( $host ) ){
+			warn "[Proc $me] no such host: $host\n";
+			next;
+		}
+		my $host_ips = join ",", map { inet_ntoa($_) } @{$h->addr_list};
+		# Reassemble everything
+		my $url = $host;
+		$url = "http://" . $url unless $url =~ m@\Ahttp://@;
+		$url .= ":$port" if $port;
+		my $req; my $resp;
+		$req = HTTP::Request->new(GET => $url);
+		# GIFS?  We don't need no stinkin' GIFS!
+		$req->header(Accept => 'text/*');
+		$resp = $ua->request($req);
+		$host .= ":$port" if $port;
+		my $string = "$host#$host_ips|";	
+		my %hosts;
+		if ($resp->is_error() ) {
+			next;
+		} else {
+			# Grab the page as a single string..
+			my $content = $resp->content();
+			# Pull all of the likely URLS into an array...
+			my @tmp = $content =~ /http:\/\/(.*?)[^.:\-\w]/msg;
+			# And pass the info back to main
+			foreach my $tgt ( @tmp ) {
+			# Process through
+				$tgt = lc( $tgt );
+				# This is somewhat redundant, but it may save some time
+				# on the server end.
+				next if $hosts{$tgt}++;
+				(my $host = $tgt) =~ s/:\d+$//;
+				next unless $h = gethost( $host );
+				my $ips = join ",", map { inet_ntoa($_) } @{$h->addr_list};
+				$string .= "$tgt#$ips|";
+			}
+		}
+		$sock = IO::Socket::UNIX->new( SOCK_PATH ) or die "Socket: $!\n";
+		next unless $string;
+		print $sock "hereyago\n";
+		print $sock "$string\n";
+		$sock->close;
+		print "Proc $me visited $host\n";
+	} continue {
+		$sock = IO::Socket::UNIX->new( SOCK_PATH ) or die "Socket: $!\n";
+	}
+}
+
+sub REAPER {
+	my $goner;
+	while ($goner = waitpid(-1, &WNOHANG) > 0 ) {
+	}
+	$SIG{CHLD} = \&REAPER;
+}
+
+	
+            
+__DATA__
+drudgereport.com
+www.macsurfer.com
+news.google.com
+refdesk.com
+www.ryukyushimpo.co.jp
+mainportals.com
