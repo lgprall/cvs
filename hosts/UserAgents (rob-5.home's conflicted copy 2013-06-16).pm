@@ -1,4 +1,4 @@
-package ua;
+package UserAgents;
 
 require Exporter;
 @ISA	= qw( Exporter );
