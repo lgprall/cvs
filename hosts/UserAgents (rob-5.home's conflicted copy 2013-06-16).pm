@@ -27,4 +27,7 @@ require Exporter;
 	"Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.1; .NET4.0C; AskTbIMT/5.9.1.14019)",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/534.13 (KHTML, like Gecko) Chrome/9.0.597.98 Safari/534.13",
 	"Opera/9.80 (Windows NT 6.1; U; en) Presto/2.7.62 Version/11.01",
+	"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4",
+	"NCSA Mosaic/1.0 (X11;SunOS 4.1.4 sun4m)",
+        "Mozilla/5.0 (X11; Linux i686; rv:2.0) Gecko/20100101 Firefox/4.0",
 	);
