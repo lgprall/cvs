@@ -1,3 +1,7 @@
+# UserAgents.pm
+# $Id$
+# This file supplies the user agents for the 'gethosts' scraper
+
 package UserAgents;
 
 require Exporter;
