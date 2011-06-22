@@ -1,5 +1,5 @@
 # UserAgents.pm
-# $Id$
+# $Id: UserAgents.pm,v 1.3 2011/03/18 12:34:05 larry Exp $
 # This file supplies the user agents for the 'gethosts' scraper
 
 package UserAgents;
@@ -34,4 +34,9 @@ require Exporter;
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4",
 	"NCSA Mosaic/1.0 (X11;SunOS 4.1.4 sun4m)",
         "Mozilla/5.0 (X11; Linux i686; rv:2.0) Gecko/20100101 Firefox/4.0",
+	"Mozilla/5.0 (X11; Linux i686; rv:2.0.1) Gecko/20100101 Firefox/4.0.1",
+	"Mozilla/5.0 (X11; Linux i686; rv:5.0) Gecko/20100101 Firefox/5.0",
+	"Mozilla/5.0 (Windows NT 6.1; rv:5.0) Gecko/20100101 Firefox/5.0",
+	"Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
+
 	);
