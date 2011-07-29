@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# $Id: set_cores.sh,v 1.16 2010/04/23 11:05:13 larry Exp $
+# $Id: set_cores.sh,v 1.17 2010/04/23 11:24:23 larry Exp $
 # Turn on cores and SFDataCorrelator debugging on a list of hosts
+# Set up logrotate for the debug files
 
 EXCLUDE=""
 
@@ -53,7 +54,9 @@ then
 	exit 0
 fi
 
-for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
+for host in $HOSTS; do echo "=====> $host";
+scp ~/lib/SFD.logrotate $host:/etc/logrotate.d/ > /dev/null 2>&1
+ssh $host 'uname -n
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
 if [ -z '$DEBUG' ]
