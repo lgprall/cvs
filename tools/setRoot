@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoot,v 1.3 2010/09/24 18:14:50 larry Exp $
+# $Id: setRoot,v 1.4 2010/09/29 13:23:19 larry Exp $
 
 # Have to get in as 'admin' first, then get a root shell
 spawn ssh "admin@$argv"
@@ -21,6 +21,14 @@ send "perl -pi -e 's/PermitRootLogin no/PermitRootLogin without-password/' /etc/
 expect "root@"
 
 send "/etc/rc.d/init.d/sshd restart\r"
+expect "root@"
+send "scp larry@10.5.45.18:.ssh/authorized_keys .ssh/authorized_keys\r"
+expect "connecting (yes/no)?" { send "yes\r" }
+expect "password:" { send "larry\r" }
+expect "root@"
+send "ls -l /boot > /root/boot.txt\r"
+expect "root@"
+send "cat /root/boot.txt\r"
 expect "root@"
 send "exit\r"
 # Again have to account for the possibility of a CLI box
