@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_hosts.sh,v 1.5 2009/05/12 11:27:15 larry Exp $
+# $Id: chk_hosts.sh,v 1.6 2009/05/12 11:39:14 larry Exp $
 # Run a (limited) command on a list of hosts
 
 EXCLUDE=""
@@ -45,7 +45,7 @@ then
 	exit 0
 fi
 
-for host in $HOSTS; do echo "=====> $host"; ssh $host <<ACTION
+for host in $HOSTS; do echo "=====> $host"; ssh root@$host <<ACTION
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
 eval $COMMAND
