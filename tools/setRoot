@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoot,v 1.6 2012/07/25 12:25:25 larry Exp $
+# $Id: setRoot,v 1.7 2012/07/25 18:53:01 larry Exp $
 
 # Have to get in as 'admin' first, then get a root shell
 spawn ssh "admin@$argv"
@@ -22,7 +22,7 @@ expect "root@"
 
 send "/etc/rc.d/init.d/sshd restart\r"
 expect "root@"
-send "grep larry@apple .ssh/authorized_keys\r"
+send "grep larry@apple .ssh/authorized_keys >/dev/null 2>&1\r"
 expect "root@"
 send "echo $?\r"
 expect "\[0-9]"
