@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoots,v 1.1 2012/04/17 11:39:10 larry Exp $
+# $Id: setRoots,v 1.2 2012/07/25 12:57:47 larry Exp $
 
 foreach host $argv {
 	# Have to get in as 'admin' first, then get a root shell
@@ -20,11 +20,10 @@ foreach host $argv {
 
 	send "perl -pi -e 's/PermitRootLogin no/PermitRootLogin without-password/' /etc/ssh/sshd_config /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/localization/en_US/templates/html_templates/pam/sshd_config.tt\r"
 	expect "root@"
-
 	send "/etc/rc.d/init.d/sshd restart\r"
 	expect "root@"
 	send "grep larry@apple .ssh/authorized_keys\r"
-	expect "root@weaver:~# "
+	expect "root@"
 	send "echo $?\r"
 	expect "\[0-9]"
 	if { $expect_out(0,string) > 0 } {
