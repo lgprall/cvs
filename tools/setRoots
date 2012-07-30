@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoots,v 1.3 2012/07/25 18:52:18 larry Exp $
+# $Id: setRoots,v 1.4 2012/07/25 18:57:21 larry Exp $
 
 foreach host $argv {
 	# Have to get in as 'admin' first, then get a root shell
@@ -25,7 +25,7 @@ foreach host $argv {
 	send "grep larry@apple .ssh/authorized_keys > /dev/null 2>&1\r"
 	expect "root@"
 	send "echo $?\r"
-	expect "\[0-9]"
+	expect "\[0-9]\n"
 	if { $expect_out(0,string) > 0 } {
 		send "scp larry@10.5.45.18:.ssh/authorized_keys .temp\r"
 		expect "connecting (yes/no)?" { send "yes\r" }
