@@ -38,7 +38,7 @@ foreach host $argv {
 		expect -re "root(@|])"
 		send "cat .temp >> /root/.ssh/authorized_keys\r"
 		expect -re "root(@|])"
-		send "rm -f /root/.temp"
+		send "rm -f /root/.temp\r"
 	}
 	send "ls -l /boot > /root/boot.txt\r"
 	expect -re "root(@|])"
