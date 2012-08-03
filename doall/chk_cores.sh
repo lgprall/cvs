@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.28 2010/11/03 10:52:53 larry Exp $
+# $Id: ck_c2,v 1.1 2012/07/31 14:52:27 larry Exp $
 # Check for core files on a list of hosts
 
-EXCLUDE=""
-
-while getopts 'svx:' OPTION
+while getopts 'bqsvx:' OPTION
 do
     case $OPTION in
     x)    EXCLUDE="$EXCLUDE $OPTARG"
@@ -14,7 +12,11 @@ do
         ;;
     v)    FULL=1
         ;;
-    h|?)  echo "Valid options are '-x exclude_host', '-v' to show all, and '-s' to show hosts"
+    q)    QUIET=1
+    	;;
+    b)    BUILDOUT=1
+        ;;
+    h|?)  echo "Valid options are '-x exclude', '-v' all, '-s' show hosts, '-q' quiet, and '-b' use alternate file."
           exit 0
         ;;
     esac
@@ -23,14 +25,24 @@ shift $(($OPTIND - 1))
 
 HOSTS=$@
 
+HOSTLIST="~/lib/hostlist"
+if test -z "$BUILDOUT"
+then
+    HOSTLIST="~/lib/blist"
+fi
 if test -z "$HOSTS"
 then
-. ~/lib/hostlist
+    HOSTLIST="hostlist"
+    if [ "$BUILDOUT" ]
+    then
+        HOSTLIST="blist"
+    fi
+    . ~/lib/$HOSTLIST
 fi
 
 for NOT in $EXCLUDE
 do
-HOSTS=${HOSTS/ $NOT / }
+	HOSTS=${HOSTS/ $NOT / }
 done
 
 if [ "$SHOW" ]
@@ -39,110 +51,72 @@ then
     exit 0
 fi
 
-if [ -z "$FULL" ]
+if [ -n "$FULL" ]
 then
-	for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
+	for host in $HOSTS; do echo "=====> $host"; ssh root@$host 'uname -n
 	. /etc/sf/ims.conf
-	FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
-        grep -q "core;" $FILE
-	if [ $? -ne 0 ]
+		FILE=$ETC_PATH/PM.conf
+			grep -q "core;" $FILE
+		if [ $? -ne 0 ]
+		then
+			echo
+			echo "       >>>>>>>> Cores not turned on"
+			echo
+			next
+		fi
+			grep -q "/var/log/SFD.log" $FILE
+		if [ $? -ne 0 ]
+		then
+			echo
+			echo "       >>>>>>>> SFD logging not turned on"
+			echo
+		fi
+		
+		if [ -d /var/common/ ]
+		then
+			cd /var/common/
+			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
+			echo
+		fi
+	'; done 2>/dev/null
+	echo
+elif [ -n "$QUIET" ]
+then
+	for host in $HOSTS; do ssh root@$host '
+	. /etc/sf/ims.conf
+	cd /var/common/
+	TMP="/tmp/cl$$"
+	(for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done) > $TMP
+	if [ -s $TMP ]
 	then
+		echo "=====> $(hostname)"
+		cat $TMP
 		echo
-		echo "       >>>>>>>> Cores not turned on"
-		echo
-		next
 	fi
-        grep -q "/var/log/SFD.log" $FILE
+	'; done 2>/dev/null
+	echo
+else
+	for host in $HOSTS; do echo "=====> $host"; ssh root@$host 'uname -n
+	. /etc/sf/ims.conf
+	FILE=$ETC_PATH/PM.conf
+	grep -q "/var/log/SFD.log" $FILE
 	if [ $? -ne 0 ]
 	then
 		echo
 		echo "       >>>>>>>> SFD logging not turned on"
 		echo
 	fi
-	if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
+	cd /var/common/
+	COUNT=$(ls core* | wc -l)
+	if [ 5 -lt $COUNT ]
 	then
-		cd $SF_DATA_ROOT_PATH/var/tmp/core
-		COUNT=$(ls core* | wc -l)
-		if [ 5 -lt $COUNT ]
-		then
-			echo "=============================================================================="
-			echo "++++++++++++++++++++++++ Found ${COUNT// /} cores in /var/tmp ++++++++++++++++++++++++++"
-			echo "=============================================================================="
-			echo
-		else
-			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
-			echo
-		fi
-	elif [ -d $SF_DATA_ROOT_PATH/var/common/ ]
-	then
-		cd $SF_DATA_ROOT_PATH/var/common/
-		COUNT=$(ls core* | wc -l)
-		if [ 5 -lt $COUNT ]
-		then
-			echo "=============================================================================="
-			echo "+++++++++++++++++++++++ Found ${COUNT// /} cores in /var/common ++++++++++++++++++++++++"
-			echo "=============================================================================="
-			echo
-		else
-			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
-			echo
-		fi
-	fi
-
-	ls $SF_DATA_ROOT_PATH/var/sf/detection_engines/*/instance*/var/tmp/core > /dev/null 2>&1
-
-	if [ 0 -eq $? ] 
-	then
-		cd $SF_DATA_ROOT_PATH/var/sf/detection_engines
-		for dir in $(ls -d */instance*/var/tmp/core)
-		do
-			cd $dir
-			if [ ! -f core* ]; then continue; fi
-			echo "   ====> in $dir"
-			COUNT=$(ls core* | wc -l)
-			if [ 5 -lt $COUNT ]
-			then
-				echo "=============================================================================="
-				echo "++++++++++++++++++++++++++++++ Found ${COUNT// /} cores ++++++++++++++++++++++++++++++++"
-				echo "=============================================================================="
-			else
-				for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done
-			fi
-			echo
-		done
-	fi
-	echo
-	'; done 2>/dev/null
-else
-	for host in $HOSTS; do echo "=====> $host"; ssh $host 'uname -n
-	. /etc/sf/ims.conf
-	FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
-	if [ -d $SF_DATA_ROOT_PATH/var/tmp/core ]
-	then
-		cd $SF_DATA_ROOT_PATH/var/tmp/core
-		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
+		echo "=============================================================================="
+		echo "+++++++++++++++++++++++ Found ${COUNT// /} cores in /var/common ++++++++++++++++++++++++"
+		echo "=============================================================================="
 		echo
-	elif [ -d $SF_DATA_ROOT_PATH/var/common/ ]
-	then
-		cd $SF_DATA_ROOT_PATH/var/common/
+	else
 		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
 		echo
 	fi
-
-	ls $SF_DATA_ROOT_PATH/var/sf/detection_engines/*/instance*/var/tmp/core > /dev/null 2>&1
-
-	if [ 0 -eq $? ] 
-	then
-		cd $SF_DATA_ROOT_PATH/var/sf/detection_engines
-		for dir in $(ls -d */instance*/var/tmp/core)
-		do
-			cd $dir
-			if [ ! -f core* ]; then continue; fi
-			echo "   ====> in $dir"
-			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done
-			echo
-		done
-	fi
-	echo
 	'; done 2>/dev/null
 fi
