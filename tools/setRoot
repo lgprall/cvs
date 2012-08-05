@@ -11,6 +11,7 @@ foreach host $argv {
 	expect "Password:"
 	send "Sourcefire\r"
 	expect "Password:" { send "sf\r" }
+	expect "Password:" { send "password\r" }
 
 	#  Might be a CLI box, so we have to get to expert mode first, then to root
 	expect "> " { send "expert\r" }
@@ -21,6 +22,7 @@ foreach host $argv {
 	#  to need a password
 	expect "Password:" { send "Sourcefire\r" }
 	expect "Password:" { send "sf\r" }
+	expect "Password:" { send "password\r" }
 	expect -re "root(@|])"
 	send "perl -pi -e 's/PermitRootLogin no/PermitRootLogin without-password/' /etc/ssh/sshd_config /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/localization/en_US/templates/html_templates/pam/sshd_config.tt\r"
 
