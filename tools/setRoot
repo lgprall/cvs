@@ -1,6 +1,6 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoot,v 1.11 2012/08/05 03:20:34 larry Exp $
+# $Id: setRoot,v 1.12 2012/08/10 09:49:09 larry Exp $
 
 foreach host $argv {
 	# If we can get in to this host as root, we're already set up and can skip it
@@ -12,6 +12,7 @@ foreach host $argv {
 	send "Sourcefire\r"
 	expect "Password:" { send "sf\r" }
 	expect "Password:" { send "password\r" }
+	expect "EULA to continue." { send "\r"; send "q"; send "yes\r" }
 
 	#  Might be a CLI box, so we have to get to expert mode first, then to root
 	expect "> " { send "expert\r" }
