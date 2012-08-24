@@ -1,6 +1,8 @@
 # UserAgents.pm
-# $Id: UserAgents.pm,v 1.5 2011/06/29 17:38:09 larry Exp $
+# $Id: UserAgents.pm,v 1.6 2011/06/29 17:39:29 larry Exp $
 # This file supplies the user agents for the 'gethosts' scraper
+
+# On CentOS in goes in /usr/lib/perl5/vendor_perl/UserAgents.pm
 
 package UserAgents;
 
@@ -41,4 +43,12 @@ require Exporter;
 	"Opera/9.80 (Windows NT 6.1; U; Distribution 00; en) Presto/2.9.168 Version/11.50",
 	"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.112 Safari/534.30",
 	"Opera/9.80 (X11; Linux i686; U; en) Presto/2.9.168 Version/11.50",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_1) AppleWebKit/536.25 (KHTML, like Gecko) Version/6.0 Safari/536.25",
+	"Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
+	"Mozilla/5.0 (Windows NT 6.1; rv:12.0) Gecko/20100101 Firefox/12.0",
+	"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.83 Safari/537.1",
+	"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/534.52.7 (KHTML, like Gecko) Version/5.1.2 Safari/534.52.7" ,
+	"Opera/9.80 (Windows NT 6.1; U; Distribution 00; en) Presto/2.10.229 Version/11.60",
+	"Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:14.0) Gecko/20100101 Firefox/14.0.1",
+	"Opera/9.80 (X11; Linux i686; U; en) Presto/2.10.289 Version/12.01",
 	);
