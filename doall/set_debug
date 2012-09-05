@@ -13,8 +13,6 @@ do
         ;;
     x)    EXCLUDE="$EXCLUDE $OPTARG"
         ;;
-    d)    DEBUG=1
-        ;;
     h|?)  echo "Valid options are:"
           echo "  -x exclude_host" 
           echo "          Exclude this host; can be used multiple times." 
