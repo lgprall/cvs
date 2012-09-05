@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# $Id$
+# set emergency pruning level to 50% or back to 95%
+
+EXCLUDE=""
+
+while getopts 'brshx:' OPTION
+do
+    case $OPTION in
+    b)
+          BUILDOUT=1
+	;;
+    r)
+	  RESTORE=1
+	;;
+    s)    SHOW=1
+        ;;
+    x)    EXCLUDE="$EXCLUDE $OPTARG"
+        ;;
+    h|?)  echo "Valid options are:"
+	  echo "  -b use buildout list"
+	  echo "  -r restore 95%"
+          echo "  -x exclude_host"
+          echo "          Exclude this host; can be used multiple times."
+          echo "  -s"
+          echo "          Show list of hosts to be acted upon."
+          exit 0
+        ;;
+    esac
+
+done
+shift $(($OPTIND - 1))
+HOSTS=$@
+
+if test -z "$HOSTS"
+then
+    HOSTLIST="hostlist"
+    if [ "$BUILDOUT" ]
+    then
+        HOSTLIST="blist"
+    fi
+    . ~/lib/$HOSTLIST
+fi
+
+if [ "$SHOW" ]
+then
+   echo "Hosts: $HOSTS"
+   exit 0
+fi
+
+for host in $HOSTS
+do
+    if [ $RESTORE ]
+    then
+        ssh root@$host ' ed /etc/sf/Prune.conf <<-EOF
+        /680_CONN_LOGS_EMERGENCY/+4 s/50/95/
+        wq
+        EOF
+        '
+    else
+        ssh root@$host ' ed /etc/sf/Prune.conf <<EOF
+        /680_CONN_LOGS_EMERGENCY/+4 s/95/50/
+        wq
+        EOF
+        '
+    fi
+done
