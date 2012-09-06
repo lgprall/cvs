@@ -3,7 +3,7 @@
 # $Id: chk_cores.sh,v 1.30 2012/08/03 09:59:54 larry Exp $
 # Check for core files on a list of hosts
 
-while getopts 'bqsvx:' OPTION
+while getopts 'bBqsvx:' OPTION
 do
     case $OPTION in
     x)    EXCLUDE="$EXCLUDE $OPTARG"
@@ -16,6 +16,8 @@ do
     	;;
     b)    BUILDOUT=1
         ;;
+    B)    BUILDOUT2=1
+        ;;
     h|?)  echo "Valid options are '-x exclude', '-v' all, '-s' show hosts, '-q' quiet, and '-b' use alternate file."
           exit 0
         ;;
@@ -25,17 +27,15 @@ shift $(($OPTIND - 1))
 
 HOSTS=$@
 
-HOSTLIST="~/lib/hostlist"
-if test -z "$BUILDOUT"
-then
-    HOSTLIST="~/lib/blist"
-fi
 if test -z "$HOSTS"
 then
     HOSTLIST="hostlist"
     if [ "$BUILDOUT" ]
     then
         HOSTLIST="blist"
+    elif [ "$BUILDOUT2" ]
+    then
+        HOSTLIST="blist2"
     fi
     . ~/lib/$HOSTLIST
 fi
