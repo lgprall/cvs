@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: ck_c2,v 1.1 2012/07/31 14:52:27 larry Exp $
+# $Id: chk_cores.sh,v 1.30 2012/08/03 09:59:54 larry Exp $
 # Check for core files on a list of hosts
 
 while getopts 'bqsvx:' OPTION

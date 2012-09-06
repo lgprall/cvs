@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_hosts.sh,v 1.6 2009/05/12 11:39:14 larry Exp $
+# $Id: chk_hosts.sh,v 1.7 2012/07/20 10:55:57 larry Exp $
 # Run a (limited) command on a list of hosts
 
 EXCLUDE=""
