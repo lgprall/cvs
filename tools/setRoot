@@ -1,10 +1,11 @@
 #!/opt/local/bin/expect
 
-# $Id: setRoot,v 1.12 2012/08/10 09:49:09 larry Exp $
+# $Id: setRoot,v 1.13 2012/08/24 21:11:47 larry Exp $
 
 foreach host $argv {
 	# If we can get in to this host as root, we're already set up and can skip it
 	spawn ssh "root@$host"
+	# set timeout 20
 	expect -re "root(@|])" { send "exit\r"; puts ""; continue }
 	# Have to get in as 'admin' first, then get a root shell
 	spawn ssh "admin@$host"
@@ -35,7 +36,7 @@ foreach host $argv {
 	send "echo $?\r"
 	expect "\[0-9]\r\n"
 	if { $expect_out(0,string) > 0 } {
-		send "scp larry@10.5.45.18:.ssh/authorized_keys .temp\r"
+		send "scp larry@10.22.35.10:.ssh/authorized_keys .temp\r"
 		expect "connecting (yes/no)?" { send "yes\r" }
 		expect "password:" { send "larry\r" }
 		expect -re "root(@|])"
