@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores.sh,v 1.30 2012/08/03 09:59:54 larry Exp $
+# $Id: chk_cores,v 1.2 2012/09/06 17:17:16 larry Exp $
 # Check for core files on a list of hosts
 
 while getopts 'bBqsvx:' OPTION
@@ -75,7 +75,7 @@ then
 		if [ -d /var/common/ ]
 		then
 			cd /var/common/
-			for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
+			for file in $(ls -tr *core*); do ls -ld --full-time $file; file $file; done 
 			echo
 		fi
 	'; done 2>/dev/null
@@ -86,7 +86,7 @@ then
 	. /etc/sf/ims.conf
 	cd /var/common/
 	TMP="/tmp/cl$$"
-	(for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done) > $TMP
+	(for file in $(ls -tr *core*); do ls -ld --full-time $file; file $file; done) > $TMP
 	if [ -s $TMP ]
 	then
 		echo "=====> $(hostname)"
@@ -115,7 +115,7 @@ else
 		echo "=============================================================================="
 		echo
 	else
-		for file in $(ls -tr core*); do ls -ld --full-time $file; file $file; done 
+		for file in $(ls -tr *core*); do ls -ld --full-time $file; file $file; done 
 		echo
 	fi
 	'; done 2>/dev/null
