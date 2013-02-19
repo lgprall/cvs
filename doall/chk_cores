@@ -87,7 +87,7 @@ then
 	cd /var/common/
 	TMP="/tmp/cl$$"
 	(for file in $(ls -tr core[._]*); do ls -ld --full-time $file; file $file; done) > $TMP
-	if [ -s $TMP ]*
+	if [ -s $TMP ]
 	then
 		echo "=====> $(hostname)"
 		cat $TMP
