@@ -1,9 +1,9 @@
 #!/bin/bash
 
+# $Id $
 /Users/larry/bin/setRoot weaver
 
 HL=$(ssh weaver "mysql --skip-column-names -padmin sfsnort -e 'select ip from EM_peers where active = 1 and role = 2'" 2>/dev/null | tr -s '\012' ' ');
 
 echo "HOSTS=\" weaver oates $HL \"" > /Users/larry/lib/blist
-/Users/larry/bin/setRoot $HL
 
