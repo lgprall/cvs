@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores,v 1.4 2012/12/06 19:55:26 larry Exp $
+# $Id: chk_cores,v 1.8 2013/02/19 11:13:33 larry Exp $
 # Check for core files on a list of hosts
 
 while getopts 'bBqsvx:' OPTION
@@ -53,7 +53,15 @@ fi
 
 if [ -n "$FULL" ]
 then
-	for host in $HOSTS; do echo "=====> $host"; ssh root@$host 'uname -n
+	for host in $HOSTS
+	do echo "=====> $host"
+	if [ ${host:0:5} == "2001:" ] 
+	then
+		OPT="-6"
+	else
+		OPT=""
+	fi
+	ssh $OPT root@$host 'uname -n
 	. /etc/sf/ims.conf
 		FILE=$ETC_PATH/PM.conf
 			grep -q "core;" $FILE
@@ -72,7 +80,7 @@ then
 			echo
 		fi
 		
-		if [ -d /var/common/ ]*
+		if [ -d /var/common/ ]
 		then
 			cd /var/common/
 			for file in $(ls -tr core[._]*); do ls -ld --full-time $file; file $file; done 
@@ -82,7 +90,15 @@ then
 	echo
 elif [ -n "$QUIET" ]
 then
-	for host in $HOSTS; do ssh root@$host '
+	for host in $HOSTS
+	do
+	if [ ${host:0:5} == "2001:" ] 
+	then
+		OPT="-6"
+	else
+		OPT=""
+	fi
+	ssh $OPT root@$host '
 	. /etc/sf/ims.conf
 	cd /var/common/
 	TMP="/tmp/cl$$"
@@ -96,7 +112,15 @@ then
 	'; done 2>/dev/null
 	echo
 else
-	for host in $HOSTS; do echo "=====> $host"; ssh root@$host 'uname -n
+	for host in $HOSTS
+	do echo "=====> $host"
+	if [ ${host:0:5} == "2001:" ] 
+	then
+		OPT="-6"
+	else
+		OPT=""
+	fi
+	ssh $OPT root@$host 'uname -n
 	. /etc/sf/ims.conf
 	FILE=$ETC_PATH/PM.conf
 	grep -q "/var/log/SFD.log" $FILE
