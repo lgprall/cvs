@@ -1,20 +1,29 @@
-#!/opt/local/bin/expect
+#!/usr/bin/expect
 
-# $Id: setRoot,v 1.15 2013/09/26 10:04:38 larry Exp $
+# $Id: setRoot,v 1.13 2012/08/24 21:11:47 larry Exp $
 
 foreach host $argv {
 	# If we can get in to this host as root, we're already set up and can skip it
-	spawn ssh "root@$host"
+	set timeout 1
+	if { [ string equal -length 4 $host "2001:" ] == 1 } {
+		spawn ssh -6 "root@$host"
+        } else {
+                spawn ssh "root@$host"
+        }
+	expect "ssh:" { puts "Can't get to $host"; set timeout 15; continue }
 	# set timeout 20
-	expect -re "root(@|]).*#" { send "exit\r"; puts ""; continue }
+	expect -re "root(@|])" { send "exit\r"; puts ""; continue }
 	# Have to get in as 'admin' first, then get a root shell
-	spawn ssh "admin@$host"
+	if { [ string equal -length 4 $host "2001:" ] == 1 } {
+		spawn ssh -6 "admin@$host"
+        } else {
+                spawn ssh "admin@$host"
+        }
 	expect "Password:"
 	send "Sourcefire\r"
 	expect "Password:" { send "sf\r" }
 	expect "Password:" { send "password\r" }
-	expect "EULA to continue." { send "\r"; send "q"; }
-	expect "AGREE to the EULA:" { send "yes\r" }
+	expect "EULA to continue." { send "\r"; send "q"; send "yes\r" }
 
 	#  Might be a CLI box, so we have to get to expert mode first, then to root
 	expect "> " { send "expert\r" }
@@ -37,9 +46,9 @@ foreach host $argv {
 	send "echo $?\r"
 	expect "\[0-9]\r\n"
 	if { $expect_out(0,string) > 0 } {
-		send "scp install@10.5.61.104:.ssh/authorized_keys .temp\r"
+		send "scp larry@10.22.35.10:.ssh/authorized_keys .temp\r"
 		expect "connecting (yes/no)?" { send "yes\r" }
-		expect "password:" { send "install\r" }
+		expect "password:" { send "larry\r" }
 		expect -re "root(@|])"
 		send "cat .temp >> /root/.ssh/authorized_keys\r"
 		expect -re "root(@|])"
