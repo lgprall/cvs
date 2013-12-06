@@ -10,7 +10,8 @@ foreach host $argv {
         } else {
                 spawn ssh "root@$host"
         }
-	expect "ssh:" { puts "Can't get to $host"; set timeout 15; continue }
+	expect "ssh:" { puts "Can't get to $host"; continue }
+	set timeout 10
 	# set timeout 20
 	expect -re "root(@|])" { send "exit\r"; puts ""; continue }
 	# Have to get in as 'admin' first, then get a root shell
