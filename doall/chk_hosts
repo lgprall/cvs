@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_hosts.sh,v 1.7 2012/07/20 10:55:57 larry Exp $
+# $Id: chk_hosts,v 1.1 2012/09/06 16:51:56 larry Exp $
 # Run a (limited) command on a list of hosts
 
 EXCLUDE=""
@@ -31,7 +31,7 @@ HOSTS=$@
 
 if test -z "$HOSTS"
 then
-. ~/lib/hostlist
+. /Users/larry/lib/hostlist
 fi
 
 for NOT in $EXCLUDE
@@ -45,10 +45,17 @@ then
 	exit 0
 fi
 
-for host in $HOSTS; do echo "=====> $host"; ssh root@$host <<ACTION
+for host in $HOSTS; do echo "=====> $host";
+if [[ ${host:0:5} == ????: ]]
+   then
+   OPT="-6"
+else
+   OPT=""
+fi
+ssh $OPT root@$host 2>/dev/null <<ACTION 
 . /etc/sf/ims.conf
 FILE=$SF_ETC_ROOT_PATH/etc/sf/PM.conf
 eval $COMMAND
 echo
 ACTION
-done 2>/dev/null
+done 
