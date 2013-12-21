@@ -55,7 +55,7 @@ if [ -n "$FULL" ]
 then
 	for host in $HOSTS
 	do echo "=====> $host"
-	if [ ${host:0:5} == "2001:" ] 
+	if [[ ${host} == *:* ]] 
 	then
 		OPT="-6"
 	else
