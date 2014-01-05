@@ -5,17 +5,21 @@
 foreach host $argv {
 	# If we can get in to this host as root, we're already set up and can skip it
 	set timeout 1
-	if { [ string equal -length 4 $host "2001:" ] == 1 } {
+	if [
+	regexp {^....:.*} $host
+	] then {
 		spawn ssh -6 "root@$host"
         } else {
                 spawn ssh "root@$host"
         }
-	expect "ssh:" { puts "Can't get to $host"; continue }
-	set timeout 10
+	expect "ssh:" { puts "Can't get to $host"; set timeout 15; continue }
 	# set timeout 20
+	set timeout 15
 	expect -re "root(@|])" { send "exit\r"; puts ""; continue }
 	# Have to get in as 'admin' first, then get a root shell
-	if { [ string equal -length 4 $host "2001:" ] == 1 } {
+	if [
+	regexp {^....:.*} $host
+	] then {
 		spawn ssh -6 "admin@$host"
         } else {
                 spawn ssh "admin@$host"
