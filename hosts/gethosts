@@ -1,7 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl -w
 
 # get_hosts
-# $Id: gh2,v 1.1 2011/03/01 18:52:49 larry Exp $  $Name:  $
+# $Id: gethosts,v 1.10 2011/03/02 11:26:21 larry Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 # This script requires that UserAgents.pm be installed in an accessible location (e.g., /usr/local/lib/site_perl)
 
@@ -38,7 +38,7 @@ $SIG{CHLD} = \&REAPER;
 $SIG{TERM} = $SIG{INT} = sub { exit 0 };
 
 ( my $ME = $0 ) =~ s@.*/@@;
-my $USAGE = qq(USAGE: $ME [-h][-m max][ -p procs][-o out_file][-f in_file] [s0 s1 ..]\n);
+my $USAGE = qq(USAGE: $ME [-h] [-i interface ip] [-m max][ -p procs][-o out_file][-f in_file] [s0 s1 ..]\n);
 
 #
 # Options
@@ -48,10 +48,12 @@ my $procs = 3;
 my $out;
 my $file;
 my $help;
+my $intf;
 GetOptions( 'help' => \$help,
 			'max=i' => \$max,
             'procs=i' => \$procs,
             'out=s'   => \$out,
+            'intf=s'   => \$intf,
             'file=s'    => \$file ) or die $USAGE;
 
 if ( defined $out ) {
@@ -333,6 +335,7 @@ sub getem {
 	my $agent = $USER_AGENTS[ int(rand(@USER_AGENTS))];
 	$ua->agent($agent);
 	$ua->timeout(30);
+	$ua->local_address("$intf");
 	
 	$SIG{PIPE} = sub { exit 0; };
 	my $sock;
