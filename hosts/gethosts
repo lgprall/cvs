@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 # get_hosts
-# $Id: gethosts,v 1.10 2011/03/02 11:26:21 larry Exp $  $Name:  $
+# $Id: gethosts,v 1.11 2015/01/29 11:01:11 lprall Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 # This script requires that UserAgents.pm be installed in an accessible location (e.g., /usr/local/lib/site_perl)
 
@@ -335,7 +335,7 @@ sub getem {
 	my $agent = $USER_AGENTS[ int(rand(@USER_AGENTS))];
 	$ua->agent($agent);
 	$ua->timeout(30);
-	$ua->local_address("$intf");
+	$ua->local_address("$intf") if defined $intf;
 	
 	$SIG{PIPE} = sub { exit 0; };
 	my $sock;
