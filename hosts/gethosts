@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 # get_hosts
-# $Id: gethosts,v 1.11 2015/01/29 11:01:11 lprall Exp $  $Name:  $
+# $Id: gethosts,v 1.12 2015/01/30 10:47:08 lprall Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 # This script requires that UserAgents.pm be installed in an accessible location (e.g., /usr/local/lib/site_perl)
 
@@ -38,7 +38,7 @@ $SIG{CHLD} = \&REAPER;
 $SIG{TERM} = $SIG{INT} = sub { exit 0 };
 
 ( my $ME = $0 ) =~ s@.*/@@;
-my $USAGE = qq(USAGE: $ME [-h] [-i interface ip] [-m max][ -p procs][-o out_file][-f in_file] [s0 s1 ..]\n);
+my $USAGE = qq(USAGE: $ME [-h] [-i interface ip] [-m max][ -p procs][-o out_file][-f in_file][-v show missed hosts][s0 s1 ..]\n);
 
 #
 # Options
@@ -48,12 +48,14 @@ my $procs = 3;
 my $out;
 my $file;
 my $help;
+my $verbose;
 my $intf;
 GetOptions( 'help' => \$help,
 			'max=i' => \$max,
             'procs=i' => \$procs,
             'out=s'   => \$out,
             'intf=s'   => \$intf,
+            'verbose' => \$verbose,
             'file=s'    => \$file ) or die $USAGE;
 
 if ( defined $out ) {
@@ -372,6 +374,7 @@ sub getem {
 		my $string = "$host#$host_ips|";	
 		my %hosts;
 		if ($resp->is_error() ) {
+			print "Couldn't reach $string\n" if defined $verbose;
 			next;
 		} else {
 			# Grab the page as a single string..
