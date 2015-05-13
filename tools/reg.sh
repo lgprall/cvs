@@ -1,5 +1,6 @@
 #!/bin/bash
-# $Id: $
+
+# $Id: reg.sh,v 1.1 2015/05/13 11:58:52 larry Exp $
 
 ME=$(basename $0)
 USAGE="Usage: $ME 4|5 start end [key]"
@@ -56,5 +57,5 @@ done | while read host
 do
     date
     echo $host
-    echo register_appliance.pl -h "$host" -k "$KEY" -l "PROTECT,CONTROL,URLFilter,MALWARE" #>>/var/log/reg.log 2>&1
+    register_appliance.pl -h "$host" -k "$KEY" -l "PROTECT,CONTROL,URLFilter,MALWARE" >>/var/log/reg.log 2>&1
 done
