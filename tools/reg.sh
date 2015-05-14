@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: reg.sh,v 1.1 2015/05/13 11:58:52 larry Exp $
+# $Id: reg.sh,v 1.2 2015/05/13 12:00:08 larry Exp $
 
 ME=$(basename $0)
 USAGE="Usage: $ME 4|5 start end [key]"
@@ -34,6 +34,13 @@ fi
 if [ -z $START -o -z $END ]
 then
     echo "You must provide a starting and ending octet."
+    echo $USAGE
+    exit 1
+fi
+
+if [ $END -gt 255 ]
+then
+    echo "Octet must be less than 256."
     echo $USAGE
     exit 1
 fi
