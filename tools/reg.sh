@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: reg.sh,v 1.2 2015/05/13 12:00:08 larry Exp $
+# $Id: reg.sh,v 1.3 2015/05/14 10:38:32 larry Exp $
 
 ME=$(basename $0)
 USAGE="Usage: $ME 4|5 start end [key]"
@@ -9,6 +9,12 @@ THIRD=$1
 START=$2
 END=$3
 KEY=$4
+
+if [[ $THIRD == "" ]]
+then
+    echo $USAGE
+exit 1
+fi
 
 if [[ $THIRD == *[!0-9]* ]] || [ $THIRD -ne 4 -a $THIRD -ne 5 ]
 then
@@ -50,6 +56,13 @@ then
     echo "Invalid limits: $START $END "
     echo $USAGE
     exit 1
+fi
+
+if [[ $((END - $START )) -gt 49 ]]
+then
+   echo "Max of 50 hosts in one run."
+   echo $USAGE
+   exit 1
 fi
 
 if [ -z $KEY ]
