@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: reg.sh,v 1.3 2015/05/14 10:38:32 larry Exp $
+# $Id: reg.sh,v 1.4 2015/06/17 13:53:51 lprall Exp $
 
 ME=$(basename $0)
 USAGE="Usage: $ME 4|5 start end [key]"
@@ -67,7 +67,7 @@ fi
 
 if [ -z $KEY ]
 then
-    KEY=pass
+    KEY=12345
 fi
 
 for ((n=$START; n<=$END; n++))
