@@ -1,4 +1,7 @@
+#!/usr/bin/python
+
 # $Id$
+
 __author__ = 'cveeraiyan'
 
 import os
@@ -49,64 +52,65 @@ mgmt_gw = 192.168.0.254
 dc_ip = 192.168.0.240
 dc_key = ngfw
 vm_folder = ST-Upgrade/vNGFW/
+
 '''
 
-def load_vngfw_ova(cfg,vmNumber,mgmtip,version,build,branch):
+def load_vngfw_ova(cfg,vmNumber,mgmtip,inp,outp,version,build,branch):
 
     mgmtip_octets= mgmtip.split('.')
     #print (mgmtip_octets)
 
     for count in range(0,vmNumber):
-
-       print ("./ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --allowExtraConfig --name=vNGFW_%s_%s "\
+       '''
+       print ("ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --allowExtraConfig --name=vNGFW_%s_%s "\
           "--datastore=%s --vmFolder=%s --diskMode=thin --net:GigabitEthernet0-0=Sensor-%s-%s-IN-%d --net:GigabitEthernet0-1=Sensor-%s-%s-OUT-%d  --net:GigabitEthernet0-2=Holding --net:Management0-0=%s " \
-          "--prop:fqdn=vNGFW --prop:pw=Admin123 --prop:dns1=171.70.168.183 --prop:ipv4.how=Manual --prop:ipv4.addr=%s " \
+          "--prop:fqdn=vNGFW --prop:pw=Admin123 --prop:dns1=192.168.0.184 --prop:ipv4.how=Manual --prop:ipv4.addr=%s " \
           "--prop:ipv4.mask=%s --prop:ipv4.gw=%s --prop:firewallmode=routed --prop:mgr=%s " \
           "--prop:regkey=%s %s/%s/%s-%s/virtual-ngfw/Cisco_Firepower_Threat_Defense_Virtual-VI-%s-%s.ovf %s" \
-           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(cfg.internal_port)+count,mgmtip_octets[2],mgmtip_octets[3],int(cfg.external_port)+count,
+           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(inp)+count,mgmtip_octets[2],mgmtip_octets[3],int(outp)+count,
             cfg.mgmt_port,mgmtip,cfg.mgmt_mask,cfg.mgmt_gw,cfg.dc_ip,cfg.dc_key,cfg.ovf_url,branch,version,build,version,build,cfg.vi_url))
-
-       os.system ("./ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --allowExtraConfig --name=vNGFW_%s_%s "\
+'''
+       os.system ("ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --allowExtraConfig --name=vNGFW_%s_%s "\
           "--datastore=%s --vmFolder=%s --diskMode=thin --net:GigabitEthernet0-0=Sensor-%s-%s-IN-%d --net:GigabitEthernet0-1=Sensor-%s-%s-OUT-%d  --net:GigabitEthernet0-2=Holding --net:Management0-0=%s " \
-          "--prop:fqdn=vNGFW --prop:pw=Admin123 --prop:dns1=171.70.168.183 --prop:ipv4.how=Manual --prop:ipv4.addr=%s " \
+          "--prop:fqdn=vNGFW --prop:pw=Admin123 --prop:dns1=192.168.0.184 --prop:ipv4.how=Manual --prop:ipv4.addr=%s " \
           "--prop:ipv4.mask=%s --prop:ipv4.gw=%s --prop:firewallmode=routed --prop:mgr=%s " \
           "--prop:regkey=%s %s/%s/%s-%s/virtual-ngfw/Cisco_Firepower_Threat_Defense_Virtual-VI-%s-%s.ovf %s" \
-           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(cfg.internal_port)+count,mgmtip_octets[2],mgmtip_octets[3],int(cfg.external_port)+count,
+           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(inp)+count,mgmtip_octets[2],mgmtip_octets[3],int(outp)+count,
             cfg.mgmt_port,mgmtip,cfg.mgmt_mask,cfg.mgmt_gw,cfg.dc_ip,cfg.dc_key,cfg.ovf_url,branch,version,build,version,build,cfg.vi_url))
 
-       mgmtip=str(ipaddress.ip_address(mgmtip) + 1)
+       mgmtip=str(ipaddress.ip_address(unicode(mgmtip)) + 1)
        mgmtip_octets= mgmtip.split('.')
        #print (mgmtip_octets)
 
 
-def load_vngips_ovf(cfg,vmNumber,mgmtip,version,build,branch):
+def load_vngips_ovf(cfg,vmNumber,mgmtip,inp,outp,version,build,branch):
     mgmtip_octets= mgmtip.split('.')
     for count in range(0,vmNumber):
 
-        print ("./ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --name=vNGIPS_%s_%s "\
+        print ("ovftool --acceptAllEulas --overwrite --powerOffTarget --allowExtraConfig --powerOn --name=vNGIPS_%s_%s "\
           "--datastore=%s --vmFolder=%s --diskMode=thin --net:Internal=Sensor-%s-%s-IN-%d --net:External=Sensor-%s-%s-OUT-%d --net:Management=%s " \
-          "--prop:fqdn=vNGIPS --prop:pw=Admin123 --prop:dns1=171.70.168.183 --prop:ipv4.how=Manual --prop:ipv4.addr=%s " \
+          "--prop:fqdn=vNGIPS --prop:pw=Admin123 --prop:dns1=192.168.0.184 --prop:ipv4.how=Manual --prop:ipv4.addr=%s " \
           "--prop:ipv4.mask=%s --prop:ipv4.gw=%s --prop:mode=Inline --prop:mgr=%s " \
           "--prop:regkey=%s %s/%s/%s-%s/virtual-appliance/VMWARE/Cisco_Firepower_NGIPSv_VMware-VI-%s-%s.ovf %s" \
-           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(cfg.internal_port)+count,mgmtip_octets[2],mgmtip_octets[3],int(cfg.external_port)+count,
+           %
+(mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(inp)+count,mgmtip_octets[2],mgmtip_octets[3],int(outp)+count,
             cfg.mgmt_port,mgmtip,cfg.mgmt_mask,cfg.mgmt_gw,cfg.dc_ip,cfg.dc_key,cfg.ovf_url,branch,version,build,version,build,cfg.vi_url))
 
-
-        os.system("./ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --name=vNGIPS_%s_%s "\
+        os.system("ovftool --acceptAllEulas --overwrite --powerOffTarget --allowExtraConfig --powerOn --name=vNGIPS_%s_%s "\
           "--datastore=%s --vmFolder=%s --diskMode=thin --net:Internal=Sensor-%s-%s-IN-%d  --net:External=Sensor-%s-%s-OUT-%d --net:Management=%s "\
-          "--prop:fqdn=vNGIPS --prop:pw=Admin123 --prop:dns1=171.70.168.183 --prop:ipv4.how=Manual --prop:ipv4.addr=%s "\
+          "--prop:fqdn=vNGIPS --prop:pw=Admin123 --prop:dns1=192.168.0.184 --prop:ipv4.how=Manual --prop:ipv4.addr=%s "\
           "--prop:ipv4.mask=%s --prop:ipv4.gw=%s --prop:mode=Inline --prop:mgr=%s "\
           "--prop:regkey=%s %s/%s/%s-%s/virtual-appliance/VMWARE/Cisco_Firepower_NGIPSv_VMware-VI-%s-%s.ovf %s"\
-           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(cfg.internal_port)+count,mgmtip_octets[2],mgmtip_octets[3],int(cfg.external_port)+count,
+           % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,mgmtip_octets[2],mgmtip_octets[3],int(inp)+count,mgmtip_octets[2],mgmtip_octets[3],int(outp)+count,
             cfg.mgmt_port,mgmtip,cfg.mgmt_mask,cfg.mgmt_gw,cfg.dc_ip,cfg.dc_key,cfg.ovf_url,branch,version,build,version,build,cfg.vi_url))
 
-        mgmtip=str(ipaddress.ip_address(mgmtip) + 1)
+        mgmtip=str(ipaddress.ip_address(unicode(mgmtip)) + 1)
         mgmtip_octets= mgmtip.split('.')
 
 
 class DeviceConfig(object):
 
-    def __init__(self, device_type,configfile=os.path.expanduser('~/Desktop/Automation/pit-vc03.cfg')):
+    def __init__(self, device_type,configfile=os.path.expanduser('~/deploy/pit-vc03.cfg')):
         config = SafeConfigParser()
         config.read(configfile)
 
@@ -147,6 +151,7 @@ def parse_args():
     parser.add_argument('--branch', help='Name of the branch (optional)')
     parser.add_argument('--number', type=int,help='Number of VMs (optional)')
     parser.add_argument('--startIp', help='Starting Management IP(optional)')
+    parser.add_argument('--startPort', help='Starting Input Port(optional)')
     parser.add_argument('--um-ip', help='Unified Management IP (optional)')
 
     args = parser.parse_args()
@@ -167,6 +172,13 @@ def main():
     else:
       deviceMgmtIp=cfg.mgmt_ip
 
+    if args.startPort:
+      inPort=args.startPort
+      outPort=int(args.startPort)+300
+    else:
+      inPort=cfg.internal_port
+      outPort=cfg.external_port
+
     if args.version:
       version=args.version
     else:
@@ -182,12 +194,10 @@ def main():
     else:
       branch=cfg.branch
 
-
-
     if args.device_type == 'vngips':
-        return load_vngips_ovf(cfg,numberOfVMs,deviceMgmtIp,version,build,branch)
+        return load_vngips_ovf(cfg,numberOfVMs,deviceMgmtIp,inPort,outPort,version,build,branch)
     elif args.device_type == 'vngfw':
-        return load_vngfw_ova(cfg,numberOfVMs,deviceMgmtIp,version,build,branch)
+        return load_vngfw_ova(cfg,numberOfVMs,deviceMgmtIp,inPort,outPort,version,build,branch)
 
 
 if __name__ == '__main__':
@@ -196,19 +206,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         sys.exit(1)
 
-
-
-'''
-       print ("./ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --allowExtraConfig --name=vNGFW_5_%d " \
-           "-ds=%s --vmFolder=%s --net:GigabitEthernet0-0=Sensor-5-%d-IN-%d --net:GigabitEthernet0-1=Sensor-5-%d-OUT-%d " \
-           "--net:GigabitEthernet0-2=Holding --net:Management0-0=%s %s/%s/%s-%s/virtual-ngfw/aquila_ngfw-%s-%s.ova %s" \
-            % (count+130,cfg.datastore,cfg.vm_folder,130+count,int(cfg.internal_port)+ count,130+count,int(cfg.external_port)+ count,
-               cfg.mgmt_port,cfg.ovf_url,cfg.branch,cfg.version,build,cfg.version,build,cfg.vi_url))
-
-
-       os.system("./ovftool --acceptAllEulas --overwrite --powerOffTarget --powerOn --allowExtraConfig --name=vNGFW_5_%d " \
-                "-ds=%s --vmFolder=%s --net:GigabitEthernet0-0=Sensor-5-%d-IN-%d --net:GigabitEthernet0-1=Sensor-5-%d-OUT-%d " \
-                "--net:GigabitEthernet0-2=Holding --net:Management0-0=%s %s/%s/%s-%s/virtual-ngfw/aquila_ngfw-%s-%s.ova %s" \
-                % (count+130,cfg.datastore,cfg.vm_folder,130+count,int(cfg.internal_port)+ count,130+count,int(cfg.external_port)+ count,
-                   cfg.mgmt_port,cfg.ovf_url,cfg.branch,cfg.version,build,cfg.version,build,cfg.vi_url))
-'''
