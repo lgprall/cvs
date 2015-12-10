@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# $Id: ovf_deploy.py,v 1.2 2015/12/09 13:35:39 larry Exp $
+# $Id: ovf_deploy.py,v 1.3 2015/12/09 17:34:01 larry Exp $
 
 __author__ = 'cveeraiyan'
 
@@ -63,7 +63,7 @@ def load_vngfw_ova(cfg,vmNumber,mgmtip,inp,outp,version,build,branch,vi_url):
 
     for count in range(0,vmNumber):
 
-        if ( int(mgmtip_octets[3]) > 100 ):
+        if (int(mgmtip_octets[3]) > 100 or int(mgmtip_octets[2]) > 4):
             port1 = "Holding"
             port2 = "Holding"
         else:
@@ -105,7 +105,7 @@ def load_vngips_ovf(cfg,vmNumber,mgmtip,inp,outp,version,build,branch,vi_url):
           "--prop:ipv4.mask=%s --prop:ipv4.gw=%s --prop:mode=Inline --prop:mgr=%s "\
           "--prop:regkey=%s %s/%s/%s-%s/virtual-appliance/VMWARE/Cisco_Firepower_NGIPSv_VMware-VI-%s-%s.ovf %s"\
            % (mgmtip_octets[2],mgmtip_octets[3],cfg.datastore,cfg.vm_folder,port1,port2,
-            cfg.mgmt_port,mgmtip_octets[2],mgmtip_octets[3],mgmtip,cfg.mgmt_mask,cfg.mgmt_gw,cfg.dc_ip,cfg.dc_key,cfg.ovf_url,branch,version,build,version,build,cfg.vi_url))
+            cfg.mgmt_port,mgmtip_octets[2],mgmtip_octets[3],mgmtip,cfg.mgmt_mask,cfg.mgmt_gw,cfg.dc_ip,cfg.dc_key,cfg.ovf_url,branch,version,build,version,build,vi_url))
 
         mgmtip=str(ipaddress.ip_address(unicode(mgmtip)) + 1)
         mgmtip_octets= mgmtip.split('.')
