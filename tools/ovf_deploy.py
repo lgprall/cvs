@@ -168,8 +168,12 @@ def main():
     args = parse_args()
     cfg = DeviceConfig(args.device_type)
 
-    ctpw = getpass( "Enter password for %s\%s@%s: " % (cfg.domain,cfg.user,cfg.vcenter_url ))
-    passwd = quote( ctpw )
+    if ( os.environ.get('OVFPASSWD') > 0 ):
+        passwd = os.environ['OVFPASSWD']
+    else: 
+        ctpw = getpass( "\nEnter password for %s\%s@%s: " % (cfg.domain,cfg.user,cfg.vcenter_url ))
+        passwd = quote( ctpw )
+
     vi_url = cfg.vi_url1 + passwd + cfg.vi_url2 
 
     numberOfVMs = 1
