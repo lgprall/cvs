@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Id: chk_cores,v 1.8 2013/02/19 11:13:33 larry Exp $
+# $Id: chk_cores,v 1.10 2013/12/21 01:14:59 larry Exp $
 # Check for core files on a list of hosts
 
 while getopts 'bBqsvx:' OPTION
@@ -32,7 +32,7 @@ then
     HOSTLIST="hostlist"
     if [ "$BUILDOUT" ]
     then
-        HOSTLIST="blist"
+        HOSTLIST="slist"
     elif [ "$BUILDOUT2" ]
     then
         HOSTLIST="blist2"
@@ -61,8 +61,13 @@ then
 	else
 		OPT=""
 	fi
+	if [[ $host =~ ^[[:digit:]]{3}$ ]]
+	then
+	   host=192.168.0.${host}
+	fi
 	ssh $OPT root@$host 'uname -n
 	. /etc/sf/ims.conf
+		COMMON=$SF_ROOT_PATH/var/common
 		FILE=$ETC_PATH/PM.conf
 			grep -q "core;" $FILE
 		if [ $? -ne 0 ]*
@@ -80,9 +85,9 @@ then
 			echo
 		fi
 		
-		if [ -d /var/common/ ]
+		if [ -d $COMMON ]
 		then
-			cd /var/common/
+			cd $COMMON
 			for file in $(ls -tr core[._]*); do ls -ld --full-time $file; file $file; done 
 			echo
 		fi
@@ -98,9 +103,14 @@ then
 	else
 		OPT=""
 	fi
+	if [[ $host =~ ^[[:digit:]]{3}$ ]]
+	then
+	   host=192.168.0.${host}
+	fi
 	ssh $OPT root@$host '
 	. /etc/sf/ims.conf
-	cd /var/common/
+	COMMON=$SF_ROOT_PATH/var/common
+	cd $COMMON
 	TMP="/tmp/cl$$"
 	(for file in $(ls -tr core[._]*); do ls -ld --full-time $file; file $file; done) > $TMP
 	if [ -s $TMP ]
@@ -120,8 +130,13 @@ else
 	else
 		OPT=""
 	fi
+		if [[ $host =~ ^[[:digit:]]{3}$ ]]
+	then
+	   host=192.168.0.${host}
+	fi
 	ssh $OPT root@$host 'uname -n
 	. /etc/sf/ims.conf
+	COMMON=$SF_ROOT_PATH/var/common
 	FILE=$ETC_PATH/PM.conf
 	grep -q "/var/log/SFD.log" $FILE
 	if [ $? -ne 0 ]*
@@ -130,7 +145,7 @@ else
 		echo "       >>>>>>>> SFD logging not turned on"
 		echo
 	fi
-	cd /var/common/
+	cd $COMMON
 	COUNT=$(ls core[._]* | wc -l)
 	if [ 5 -lt $COUNT ]*
 	then
