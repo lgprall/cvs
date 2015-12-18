@@ -1,0 +1,56 @@
+#!/usr/bin/expect
+
+# $Id$
+
+set host $argv
+set timeout 1
+if [
+regexp {^....:.*} $host
+] then {
+	exit
+} else {
+	spawn ssh "root@$host"
+}
+expect "ssh:" { puts "Can't get to $host"; set timeout 10; continue }
+# set timeout 20
+expect "root(@|])" { send "exit\r" }
+# Have to get in as 'admin' first, then get a root shell
+set timeout 10
+spawn ssh "admin@$host"
+expect "sword:"
+send "Admin123\r"
+expect "EULA: " { send "\r"; send "q"; send "yes\r" }
+
+#  Might be a CLI box, so we have to get to expert mode first, then to root
+expect "> " { send "expert\r" }
+
+expect "admin(@|])"
+send "sudo -i\r"
+#  This is conditional because sudo might have been run recently enough not
+#  to need a password
+expect "sword:" { send "Admin123\r" }
+expect "root(@|])"
+send "perl -pi -e 's/PermitRootLogin no/PermitRootLogin without-password/' /etc/ssh/sshd_config /usr/local/sf/htdocs/templates/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/html_templates/pam/sshd_config.tt /usr/local/sf/htdocs/localization/en_US/templates/html_templates/pam/sshd_config.tt\r"
+
+expect "root(@|])"
+send "/etc/rc.d/init.d/sshd restart\r"
+expect "root(@|])"
+send "grep larry@apple .ssh/authorized_keys > /dev/null 2>&1\r"
+expect "root(@|])"
+send "echo $?\r"
+expect "\[0-9]\r\n"
+if { $expect_out(0,string) > 0 } {
+	send "scp larry@192.168.0.237:lib/authorized_keys .temp\r"
+	expect "connecting (yes/no)?" { send "yes\r" }
+	expect "sword:" { send "larry\r" }
+	expect "root(@|])"
+	send "cat .temp >> /root/.ssh/authorized_keys\r"
+	expect "root(@|])"
+	send "rm -f /root/.temp\r"
+}
+send "kill -HUP `cat /var/run/sshd.pid`\r"
+send "exit\r"
+# Again have to account for the possibility of a CLI box
+expect "admin(@|])" { send "exit\r" }
+expect "> " { send "exit\r" }
+puts "\n"
