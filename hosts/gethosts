@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 # get_hosts
-# $Id: gethosts,v 1.12 2015/01/30 10:47:08 lprall Exp $  $Name:  $
+# $Id: gethosts,v 1.13 2015/02/10 15:56:10 larry Exp $  $Name:  $
 # Collect hosts, trying very hard not to hit any more than once...
 # This script requires that UserAgents.pm be installed in an accessible location (e.g., /usr/local/lib/site_perl)
 
@@ -51,7 +51,7 @@ my $help;
 my $verbose;
 my $intf;
 GetOptions( 'help' => \$help,
-			'max=i' => \$max,
+            'max=i' => \$max,
             'procs=i' => \$procs,
             'out=s'   => \$out,
             'intf=s'   => \$intf,
