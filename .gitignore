@@ -1,4 +1,5 @@
 # CVS default ignores begin
+.DS_STORE
 tags
 TAGS
 .make.state
